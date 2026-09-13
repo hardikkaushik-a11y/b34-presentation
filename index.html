@@ -1255,6 +1255,11 @@ function trLoad(i,then){
 function trGo(i){
   trLoad(i,t=>{
     TR.idx=i;
+    /* Arrive facing something worth seeing. Keeping the heading you had makes you
+       land staring at whatever happened to be behind the hotspot - usually a wall -
+       and every visitor then has to drag before the room means anything. The angle
+       per stop is picked by build/pick_arrival_views.py and lands in rooms-tour.js. */
+    if(typeof TR.data.points[i].yaw==='number'){ TR.yaw=TR.data.points[i].yaw; TR.pitch=0; }
     TR.sphere.material=new THREE.MeshBasicMaterial({map:t,side:THREE.DoubleSide});
     /* Two rotations, not one. The -90 is a fixed convention gap: a three.js sphere
        shows u=0.5 at -X once it is flipped inside out, while Blender's equirect puts
