@@ -1,0 +1,9 @@
+# Build pipeline, intermediates, and backups. build/backup/ holds the unscrubbed
+# project.js with the client's real name and address - it must never be committed.
+build/
+.claude/
+.DS_Store
+
+# base64 twins of the GLBs, only needed to open index.html over file://.
+# On a web host they are dead weight (~46 MB) - the .glb files are served directly.
+*.glb.js
