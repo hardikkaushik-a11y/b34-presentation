@@ -251,6 +251,7 @@ body{
       <button class="tb on" id="t3d">3D</button>
       <button class="tb" id="tplan">Plan</button>
       <button class="tb" id="tpres">Present</button>
+      <button class="tb" id="tflat" title="Walk the whole flat">Walk</button>
     </div>
   </aside>
 
@@ -296,6 +297,28 @@ body{
   <div id="tload">Loading panorama</div>
 </div>
 
+<style>
+/* Doorways. The bedrooms were exported as sealed volumes - there is no hole in any of
+   them to physically walk through - so moving between the flat and a bedroom is a step
+   through a door rather than a continuous stride. These are those doors. */
+#wdoors{position:absolute;left:0;right:0;bottom:58px;display:flex;gap:8px;
+  justify-content:center;flex-wrap:wrap;pointer-events:auto;z-index:6}
+#wdoors button{background:rgba(20,17,14,.82);border:1px solid rgba(214,186,140,.42);
+  color:#E7E0D2;font:500 10px/1 inherit;letter-spacing:.16em;text-transform:uppercase;
+  padding:10px 15px;cursor:pointer;backdrop-filter:blur(7px);border-radius:2px}
+#wdoors button:hover{background:rgba(214,186,140,.18);border-color:rgba(214,186,140,.8)}
+#wdoors .here{opacity:.55;pointer-events:none;border-style:dashed}
+/* On a phone the movement stick lives bottom-left, and the doorway bar was landing on
+   top of it: you could not walk without hitting a door, or take a door without grabbing
+   the stick. Move the doors to the top on touch and leave the bottom to the joystick. */
+@media(max-width:820px), (hover:none){
+  #wdoors{top:108px;bottom:auto;left:8px;right:8px;justify-content:flex-start;
+    max-height:96px;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #wdoors::-webkit-scrollbar{display:none}
+  #wdoors button{padding:9px 12px;font-size:9px;white-space:nowrap;flex:0 0 auto}
+}
+</style>
 <div id="walk">
   <canvas id="cwalk"></canvas>
   <div id="wxhair"></div>
@@ -306,6 +329,7 @@ body{
       <button id="wexit">Exit walk</button>
     </div>
   </div>
+  <div id="wdoors"></div>
   <div id="wfoot"><span id="wfoottxt">W A S D to move · Mouse to look · Shift to stride · Tab for plan view</span></div>
   <div id="wclick">Click to look around</div>
   <div id="wload">Building the room<div id="wbar"><i></i></div></div>
@@ -1092,6 +1116,7 @@ $('#cwalk').addEventListener('click',e=>{
 },true);
 
 function wLoop(){
+  wDoorsIfMoved();
   wraf=requestAnimationFrame(wLoop);
   const t=performance.now(), dt=Math.min(.05,(t-wlast)/1000); wlast=t;
   if(!WK.ready)return;
@@ -1119,7 +1144,7 @@ function enterWalk(r){
     else { const dx=pack.ctr.x-WK.pos.x, dz=pack.ctr.z-WK.pos.z;
            WK.yaw=Math.atan2(-dx,-dz); }
     WK.pitch=0;
-    WK.ready=true; $('#wload').classList.remove('on');
+    WK.ready=true; $('#wload').classList.remove('on'); _wRoom=null; wDoors(); wHint();
     if(!matchMedia('(hover:none)').matches)$('#wclick').classList.add('on');
     wlast=performance.now(); if(!wraf)wLoop();
   };
@@ -1136,15 +1161,55 @@ function enterWalk(r){
         (err&&err.message?err.message:'')+'</span>';});
 }
 
+/* Standing where? The shell is one connected volume covering the whole public half of
+   the flat, so the room name has to come from the plan rectangles rather than from which
+   model is loaded. */
+function shellRoomAt(x, z){
+  const F=(P.wholeFlat&&P.wholeFlat.rooms)||[];
+  const by=-z;                     // the viewer maps three.z = -blender.y
+  for(const r of F) if(x>=r.x&&x<=r.x+r.w&&by>=r.y&&by<=r.y+r.d) return r;
+  return null;
+}
+let _wRoom=null;
+function wDoorsIfMoved(){
+  if(WK.id!=='shell')return;
+  const r=shellRoomAt(WK.pos.x,WK.pos.z);
+  const k=r?r.id:null;
+  if(k!==_wRoom){ _wRoom=k; wDoors(); }
+}
+function wHint(){
+  const el=$('#wfoottxt'); if(!el)return;
+  el.textContent = matchMedia('(hover:none)').matches
+    ? 'Joystick to move · Drag to look · Tap a doorway to change room'
+    : 'W A S D to move · Mouse to look · Shift to stride · Tab for plan view';
+}
+function wDoors(){
+  const host=$('#wdoors'); if(!host)return;
+  host.innerHTML='';
+  const mk=(label,fn,here)=>{const b=document.createElement('button');
+    b.textContent=label; if(here)b.className='here'; else b.onclick=fn;
+    host.appendChild(b);};
+  if(WK.id==='shell'){
+    const here=shellRoomAt(WK.pos.x,WK.pos.z);
+    if(here)mk(here.name,null,true);
+    (P.rooms||[]).filter(r=>r.glb&&r.id!=='shell').forEach(r=>
+      mk('Enter '+r.name,()=>{exitWalk();setTimeout(()=>enterWalk(r),60);}));
+  }else if(P.wholeFlat){
+    mk('Exit to the flat',()=>{exitWalk();setTimeout(()=>enterWalk(P.wholeFlat),60);});
+  }
+}
+
 function exitWalk(){
   WK.on=false; WK.ready=false;
   if(WK.plan)planToggle(false);
   if(document.pointerLockElement)document.exitPointerLock();
   $('#walk').classList.remove('on');
   $('#wclick').classList.remove('on');
+  { const h=$('#wdoors'); if(h)h.innerHTML=''; }
   cancelAnimationFrame(wraf); wraf=0;
 }
 $('#wexit').onclick=exitWalk;
+if($('#tflat'))$('#tflat').onclick=()=>{ if(P.wholeFlat)enterWalk(P.wholeFlat); };
 $('#dwalk').onclick=()=>{const r=P.rooms.find(x=>x.id===activeId); if(r)enterWalk(r);};
 
 /* pointer lock look */

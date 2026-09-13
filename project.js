@@ -116,6 +116,28 @@ window.PROJECT = {
   slideOrder: ["master","bed2","bed3","bed1"],
 
   floorplanImage: "assets/floorplan.png",
+  /* The half of the flat that was never modelled: living, dining, kitchen, store,
+     lobby, balcony, wardrobe and the four toilets. Built from ALD-01 by
+     build/build_shell.py as one envelope with single partitions and real door gaps,
+     so it walks as one connected space. Positions are the plan's; appearance is not
+     designed yet and is deliberately bare. */
+  wholeFlat: {
+    id: "shell", glb: "shell.glb", name: "The Whole Flat", group: "walk through",
+    rooms: [
+      { id:"living",  name:"Living Room",      x:3.60, y:5.33, w:3.58, d:3.86 },
+      { id:"dining",  name:"Dining",           x:3.60, y:2.74, w:3.58, d:2.59 },
+      { id:"kitchen", name:"Kitchen",          x:3.60, y:0.00, w:4.27, d:2.74 },
+      { id:"store",   name:"Store",            x:7.87, y:0.00, w:1.52, d:1.52 },
+      { id:"lobby",   name:"Lobby",            x:7.18, y:5.33, w:2.74, d:3.86 },
+      { id:"balcony", name:"Balcony",          x:0.00, y:9.19, w:6.10, d:1.83 },
+      { id:"wiw",     name:"Walk-in Wardrobe", x:0.00, y:5.19, w:1.83, d:1.37 },
+      { id:"tlt1",    name:"Toilet 1",         x:1.83, y:5.19, w:1.37, d:1.37 },
+      { id:"tlt2",    name:"Toilet 2",         x:13.56,y:6.83, w:1.52, d:2.00 },
+      { id:"tlt3",    name:"Toilet 3",         x:13.56,y:11.35,w:1.52, d:2.11 },
+      { id:"tlt4",    name:"Toilet 4",         x:7.18, y:9.19, w:1.37, d:1.22 }
+    ]
+  },
+
   renderPath:     "assets/renders/",
   tourPath:       "assets/tour/",
   roomPath:       "assets/rooms/"
