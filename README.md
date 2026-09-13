@@ -1,5 +1,8 @@
 # B-34 - Interactive Project Presentation
 
+**What this is for and where it is going: [GOAL.md](GOAL.md).** This file is how it
+works; that one is why it exists.
+
 Open `index.html` in any browser. No server, no install, no internet needed.
 Everything is inside this folder.
 
