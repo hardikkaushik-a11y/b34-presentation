@@ -1,0 +1,26 @@
+{
+  "method": "Union shell clearance with transformed source nav within traced room regions; conservative grid test, no geometry edits",
+  "results": {
+    "master": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 1001
+    },
+    "bed1": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 674
+    },
+    "bed2": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 776
+    },
+    "bed3": {
+      "spawn_reachable": true,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 693
+    }
+  },
+  "caveat": "A failed result may reflect a shut modeled door, conservative source grid or registration mismatch. It does not justify deleting source geometry."
+}

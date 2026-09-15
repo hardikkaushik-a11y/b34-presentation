@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "duration_seconds": 60,
+  "music": false,
+  "voiceover": false,
+  "style": "Calm cinematic architecture film; faithful approved room designs",
+  "shots": [
+    {
+      "id": 1,
+      "room": "master",
+      "duration_seconds": 9,
+      "composition": "Door-side reveal toward bed",
+      "motion": "Short lateral move; reveal complete bed and wall joinery",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 2,
+      "room": "master",
+      "duration_seconds": 9,
+      "composition": "Seating and study extension",
+      "motion": "Reveal desk and lounge; keep the extension visible",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 3,
+      "room": "bed1",
+      "duration_seconds": 8,
+      "composition": "Bed and wardrobe",
+      "motion": "Slow approach from a clear aisle, no wall crossing",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 4,
+      "room": "bed1",
+      "duration_seconds": 6,
+      "composition": "Joinery detail",
+      "motion": "Fixed focal length lateral detail move",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 5,
+      "room": "bed2",
+      "duration_seconds": 8,
+      "composition": "Bed, window and desk",
+      "motion": "Gentle lateral move showing the approved arrangement",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 6,
+      "room": "bed2",
+      "duration_seconds": 6,
+      "composition": "Materials and lighting",
+      "motion": "Stable close shot of a confirmed surface",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 7,
+      "room": "bed3",
+      "duration_seconds": 8,
+      "composition": "Window-to-bed composition",
+      "motion": "Show headboard at sheet-right",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    },
+    {
+      "id": 8,
+      "room": "bed3",
+      "duration_seconds": 6,
+      "composition": "Study finish",
+      "motion": "End on a useful wide view, not a blank wall",
+      "source": "existing approved room model + architect render references",
+      "camera_keyframes": null,
+      "status": "composition proposal; camera clearance and visual approval pending"
+    }
+  ],
+  "production": [
+    "Choose and inspect one representative moving shot before full rendering.",
+    "Keep an immutable source model; save per-shot camera, lighting and render settings.",
+    "Render checkpointed image sequences, then assemble MP4. Resume only missing/invalid frames.",
+    "Do not substitute a slideshow or claim panorama turns are translational camera movement.",
+    "Use V-Ray source lighting/materials for fidelity when available; any Blender remapping requires side-by-side approval.",
+    "No invented full-flat interiors in this bedroom film.",
+    "Generative video is an optional separately reviewed interpretation; reject drifting products, geometry and finishes."
+  ]
+}

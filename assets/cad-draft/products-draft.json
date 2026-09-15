@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "id": "bathroom-1",
+      "room": "tlt3",
+      "category": "Storage geyser",
+      "brand": "V-Guard",
+      "model_sku": null,
+      "status": "brand_confirmed",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-2",
+      "room": "tlt3",
+      "category": "Wall-hung WC",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-3",
+      "room": "tlt3",
+      "category": "Vessel basin",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-4",
+      "room": "tlt3",
+      "category": "Rain shower",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-5",
+      "room": "tlt3",
+      "category": "Hand shower",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-6",
+      "room": "tlt3",
+      "category": "Wall tile",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "bathroom-7",
+      "room": "tlt3",
+      "category": "Accent stone",
+      "brand": null,
+      "model_sku": null,
+      "status": "unidentified",
+      "source": "products/products.csv + bathroom renders",
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false
+    },
+    {
+      "id": "kitchen-dishwasher",
+      "room": "kitchen",
+      "category": "Dishwasher",
+      "brand": "LG",
+      "model_sku": "DFB532FP",
+      "dimensions_mm": {
+        "width": 600,
+        "depth": 600,
+        "height": 850
+      },
+      "status": "specified_in_CAD_not_purchase_confirmed",
+      "source": {
+        "file": "source/cad/claude-exploration/DWK_IDC_B34_Base_File.dxf",
+        "entity": "6537D",
+        "text_location_cad_inches": [
+          4012.7986,
+          2591.0931
+        ]
+      },
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false,
+      "notes": "Text position is not a verified installation point. Confirm schedule revision and exact manufacturer model before sourcing a 3D asset."
+    },
+    {
+      "id": "kitchen-fridge",
+      "room": "kitchen",
+      "category": "Refrigerator",
+      "brand": "LG",
+      "model_sku": "GL-B257HMC3",
+      "dimensions_mm": {
+        "width": 913,
+        "depth": 735,
+        "height": 1790
+      },
+      "status": "specified_in_CAD_not_purchase_confirmed",
+      "source": {
+        "file": "source/cad/claude-exploration/DWK_IDC_B34_Base_File.dxf",
+        "entity": "6781D",
+        "text_location_cad_inches": [
+          3954.1542,
+          2534.2297
+        ]
+      },
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false,
+      "notes": "Text position is not a verified installation point. Confirm schedule revision and exact manufacturer model before sourcing a 3D asset."
+    },
+    {
+      "id": "balcony-washer",
+      "room": "balcony",
+      "category": "Front-load washing machine",
+      "brand": "IFB",
+      "model_sku": null,
+      "dimensions_mm": {
+        "width": 600,
+        "depth": 600,
+        "height": 900
+      },
+      "status": "specified_in_CAD_not_purchase_confirmed",
+      "source": {
+        "file": "source/cad/claude-exploration/DWK_IDC_B34_Base_File.dxf",
+        "entity": "6526B",
+        "text_location_cad_inches": [
+          3806.5929,
+          2867.9809
+        ]
+      },
+      "asset": null,
+      "hotspot": null,
+      "purchase_approval": false,
+      "notes": "Text position is not a verified installation point. Confirm schedule revision and exact manufacturer model before sourcing a 3D asset."
+    }
+  ],
+  "hotspot_schema": {
+    "product_id": "required stable product ID",
+    "space": "room-local metres or global GLB metres",
+    "position_xyz": "three finite numbers; null until placement verified",
+    "visible": "false until position and product reviewed",
+    "label": "product description; exact SKU only where sourced",
+    "image": "optional approved product image",
+    "url": "optional verified manufacturer product page"
+  },
+  "rules": [
+    "Never substitute a visually similar asset and call it product accurate.",
+    "Null hotspots do not appear in client view.",
+    "No inferred prices, availability or purchase approval."
+  ]
+}

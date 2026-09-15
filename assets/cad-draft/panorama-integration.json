@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "projection": "equirectangular_mono",
+  "test_size": [
+    2048,
+    1024
+  ],
+  "preferred_final_size": [
+    3072,
+    1536
+  ],
+  "points": [
+    {
+      "id": "master-scene-1",
+      "room": "master",
+      "sketchup_scene": 1,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "master-scene-3",
+      "room": "master",
+      "sketchup_scene": 3,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "master-scene-6",
+      "room": "master",
+      "sketchup_scene": 6,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "master-scene-7",
+      "room": "master",
+      "sketchup_scene": 7,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed1-scene-2",
+      "room": "bed1",
+      "sketchup_scene": 2,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed1-scene-4",
+      "room": "bed1",
+      "sketchup_scene": 4,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed1-scene-5",
+      "room": "bed1",
+      "sketchup_scene": 5,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed2-scene-1",
+      "room": "bed2",
+      "sketchup_scene": 1,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed2-scene-2",
+      "room": "bed2",
+      "sketchup_scene": 2,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed2-scene-3",
+      "room": "bed2",
+      "sketchup_scene": 3,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed3-scene-2",
+      "room": "bed3",
+      "sketchup_scene": 2,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed3-scene-3",
+      "room": "bed3",
+      "sketchup_scene": 3,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    },
+    {
+      "id": "bed3-scene-4",
+      "room": "bed3",
+      "sketchup_scene": 4,
+      "file": null,
+      "camera_room_xyz_m": null,
+      "arrival_yaw_rad": null,
+      "north_yaw_offset_rad": null,
+      "links": [],
+      "status": "awaiting_vray_mono_panorama",
+      "quality_review": {
+        "inside_room": null,
+        "duplicate_position": null,
+        "seams": null,
+        "exposure": null,
+        "arrival_view": null
+      }
+    }
+  ],
+  "notes": [
+    "Saved scene numbers are candidates, not proof of unique camera positions.",
+    "Record physical positions and actual panorama orientation. Do not assume identical yaw conventions across exporters.",
+    "Existing Cycles files are not V-Ray replacements.",
+    "Final pixel size may be changed after measuring one real render."
+  ]
+}

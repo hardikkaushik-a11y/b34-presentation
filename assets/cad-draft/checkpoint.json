@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "path": "web/assets/cad-draft/README.md",
+      "bytes": 5561,
+      "sha256": "8cc27968f43fbf10d1fb18c1548b7f213c5ce0f68a8721fe707aa3a38833aa0b"
+    },
+    {
+      "path": "web/assets/cad-draft/cinematic-plan.json",
+      "bytes": 3956,
+      "sha256": "e8dab9ecd21fac2e311569c2c8fb8363c13fcd051236872a5693140280fe7aa6"
+    },
+    {
+      "path": "web/assets/cad-draft/combined-navigation-check.json",
+      "bytes": 803,
+      "sha256": "0de5c0a2f466c17b93511bffc4a1bc42aa74ea7cd51520a509268ece4cd7a553"
+    },
+    {
+      "path": "web/assets/cad-draft/flat-cad.blend",
+      "bytes": 124727,
+      "sha256": "f6249a7746182e1004be68c05fb0898a506a1636dd7d56ac057001d1b3c936dd"
+    },
+    {
+      "path": "web/assets/cad-draft/flat-cad.glb",
+      "bytes": 117500,
+      "sha256": "463f0232e2a6c8001bf77c60f572e5bed3fb51482e0d575de4848267d9291dda"
+    },
+    {
+      "path": "web/assets/cad-draft/navigation.json",
+      "bytes": 75302,
+      "sha256": "8a269b32c84e7f43bd7b406b5a5cb0d1e2063b106d9f39cf8949447781be2a73"
+    },
+    {
+      "path": "web/assets/cad-draft/panorama-integration.json",
+      "bytes": 6425,
+      "sha256": "9be565cb5503e2b42bb55cd2b0b7886b2a1274e240ca9fc27e68370b679e1e98"
+    },
+    {
+      "path": "web/assets/cad-draft/products-draft.json",
+      "bytes": 5156,
+      "sha256": "58481fe3b4684a7eeb78c5ea6d5a8835bf688c0f174c26a688d91376b51a619c"
+    },
+    {
+      "path": "web/assets/cad-draft/registration-and-paths.png",
+      "bytes": 111906,
+      "sha256": "11185029a3cb83b678321581d5f4e08b0f26cd5d45e447222ba9c7a6f4fae497"
+    },
+    {
+      "path": "web/assets/cad-draft/scene.json",
+      "bytes": 46943,
+      "sha256": "a4eff733af55dad646e10f691a2113f77d51439cbccc3ff11a1593fdcadf7879"
+    },
+    {
+      "path": "web/assets/cad-draft/validation.json",
+      "bytes": 1346,
+      "sha256": "fd3e929564f6f25b518f33e81df8c61c739d63354e28cda66375c56d14c4c3ee"
+    },
+    {
+      "path": "web/cad-review.html",
+      "bytes": 13038,
+      "sha256": "4705c5614f8903f350a194e70fef81e3b14e7b732e906e58034a60c8b5ffa7ac"
+    }
+  ],
+  "resume": "Read README.md; run only affected steps. Local source models and live site are preserved."
+}

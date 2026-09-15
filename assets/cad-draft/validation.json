@@ -1,0 +1,56 @@
+{
+  "shell_wall_regions": 61,
+  "glb_bytes": 117500,
+  "cad_units": "inches",
+  "conversion": 0.0254,
+  "polygons_valid": true,
+  "shell_targets_reachable": [
+    "entry",
+    "dining",
+    "lobby",
+    "bed1",
+    "bed2",
+    "bed3",
+    "master"
+  ],
+  "original_room_scale_preserved": true,
+  "browser_checked": [
+    "CAD shell loads",
+    "All four bedroom GLBs load",
+    "Top-down model overlay",
+    "Master arrival view",
+    "Master study entry",
+    "Bedroom 2 arrival",
+    "Bedroom 3 arrival",
+    "Bedroom 1 final arrival",
+    "Original plan view",
+    "Shell entrance view"
+  ],
+  "limits": [
+    "No photoreal comparison passed.",
+    "Furniture collision uses existing per-room grids; continuous furnished cross-room route unproven.",
+    "Pascal imported graph but no visible geometry validated."
+  ],
+  "combined_navigation_results": {
+    "master": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 1001
+    },
+    "bed1": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 674
+    },
+    "bed2": {
+      "spawn_reachable": false,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 776
+    },
+    "bed3": {
+      "spawn_reachable": true,
+      "spawn_cell_free": true,
+      "removed_furniture_cells": 693
+    }
+  }
+}
