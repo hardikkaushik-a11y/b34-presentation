@@ -83,11 +83,9 @@ window.ROOMMAT = {
       "ChenZc_210512_JRI17"                 : { color:0x9A8D7A, rough:0.04 },   // ChenZc-210512-JRI17
       "ChenZc_210512_JRI18"                 : { color:0x786048, rough:0.04 },   // ChenZc-210512-JRI18
       "ChenZc_210512_JRI19"                 : { color:0x6E5A41, rough:0.04 },   // ChenZc-210512-JRI19
-      "ChenZc_210512_JRI25"                 : { color:0x000000, rough:0.04, opacity:0.3 },   // ChenZc-210512-JRI25
-      "ChenZc_210512_JRI44"                 : { color:0x0C0C0C, rough:0.04 },   // ChenZc-210512-JRI44
+      "ChenZc_210512_JRI25"                 : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // ChenZc-210512-JRI25
       "ChenZc_210512_JRI45"                 : { color:0x5B5247, rough:0.04 },   // ChenZc-210512-JRI45
-      "ChenZc_210512_JRI51"                 : { color:0x101010, rough:0.04 },   // ChenZc-210512-JRI51
-      "ChenZc_210512_JRI57"                 : { color:0x959595, rough:0.04, opacity:0.3 },   // ChenZc-210512-JRI57
+      "ChenZc_210512_JRI57"                 : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // ChenZc-210512-JRI57
       "ChenZc_210512_JRI84"                 : { color:0x2F2C2C, rough:0.25 },   // ChenZc-210512-JRI84
       "GOLD_METAL"                          : { color:0xC6B7A8, rough:0.1 },   // GOLD METAL
       "GREY_FABRIC_9"                       : { color:0xB69232, rough:0.45 },   // GREY FABRIC#9
@@ -108,16 +106,14 @@ window.ROOMMAT = {
       "WOOD1_1"                             : { color:0x62391B, rough:0.4 },   // WOOD1#1
       "WOOD1_2"                             : { color:0x62391B, rough:0.4 },   // WOOD1#2
       "_0043_SaddleBrown_1_1"               : { color:0x626262, rough:0.04 },   // [0043_SaddleBrown]1#1
-      "_0136_Charcoal_3"                    : { color:0x181818, rough:0.25 },   // [0136_Charcoal]3
       "_12"                                 : { color:0x292929, rough:0.3 },   // *12
-      "_Translucent_Glass_Gray_6"           : { color:0x676767, rough:0.04, opacity:0.3 },   // [Translucent Glass Gray]6
+      "_Translucent_Glass_Gray_6"           : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // [Translucent Glass Gray]6
       "vray_ChenZc_200606_DCZ22"            : { color:0x676462, rough:0.04 },   // vray ChenZc-200606-DCZ22
     },
     bed1: {
       "Aluminum_Brushed_5cm_1"              : { color:0xAAA399, rough:0.38 },   // Aluminum_Brushed_5cm#1
       "Aluminum_Polished"                   : { color:0xC1C1C1, rough:0.04 },   // Aluminum_Polished
       "BEIGE_dunhil_grey"                   : { color:0xB9B5AE, rough:0.1 },   // BEIGE dunhil grey
-      "ChenZc_190609_rt27"                  : { color:0x000000, rough:0.24 },   // ChenZc-190609-rt27
       "GOLD_METAL"                          : { color:0xB7AA9F, rough:0.1 },   // GOLD METAL
       "GREY_FABRIC_8"                       : { color:0xB69232, rough:0.45 },   // GREY FABRIC#8
       "Generic1_1"                          : { color:0xAAA59D, rough:0.15 },   // Generic1#1
@@ -126,12 +122,11 @@ window.ROOMMAT = {
       "Generic_1"                           : { color:0xA09D99, rough:0.04 },   // Generic#1
       "Generic_4"                           : { color:0xA8A39E, rough:0.04 },   // Generic#4
       "Generic_5"                           : { color:0x322B24, rough:0.04 },   // Generic#5
-      "Glass_Frosted"                       : { color:0x000000, rough:0.25, opacity:0.34 },   // Glass_Frosted
+      "Glass_Frosted"                       : { color:0xC6CDD1, rough:0.25, opacity:0.34 },   // Glass_Frosted
       "Leather_White_01_30cm"               : { color:0x8D8A78, rough:0.41 },   // Leather White 01 30cm
       "M_1_logo_ch"                         : { color:0x72629D, rough:0.35 },   // 1_logo ch
       "Material1_1"                         : { color:0x706C67, rough:0.2 },   // Material1#1
       "Material__2"                         : { color:0x676767, rough:0.04 },   // Material__2
-      "Material__2766776"                   : { color:0x020202, rough:0.04 },   // Material #2766776
       "Material__2766852"                   : { color:0x353535, rough:0.04 },   // Material #2766852
       "Material__3"                         : { color:0xA6A6A4, rough:0.04 },   // Material__3
       "Material__4"                         : { color:0xB2B2B2, rough:0.04 },   // Material__4
@@ -147,22 +142,19 @@ window.ROOMMAT = {
       "THREAD_926F76CE_BF50_4c7a_A889_CF4CAA97EB5E_png3": { color:0x9C9C9C, rough:0.04 },   // THREAD-926F76CE-BF50-4c7a-A889-CF4CAA97EB5E.png3
       "WOOD1"                               : { color:0x62391B, rough:0.3 },   // WOOD1
       "_0043_SaddleBrown_1_1"               : { color:0x626262, rough:0.04 },   // [0043_SaddleBrown]1#1
-      "_0136_Charcoal_3"                    : { color:0x181818, rough:0.25 },   // [0136_Charcoal]3
       "_12"                                 : { color:0x292929, rough:0.3 },   // *12
       "_2"                                  : { color:0x929292, rough:0.04 },   // *2
       "_5"                                  : { color:0xBBBBBB, rough:0.04 },   // *5
       "_6"                                  : { color:0x7B6B3E, rough:0.04 },   // *6
-      "_Translucent_Glass_Gray_6"           : { color:0x676767, rough:0.04, opacity:0.3 },   // [Translucent Glass Gray]6
+      "_Translucent_Glass_Gray_6"           : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // [Translucent Glass Gray]6
       "____www_3dfox_cn_zldt_5220102"       : { color:0x9D9D9D, rough:0.04 },   // 狐模网-www.3dfox.cn-zldt-5220102
       "____www_3dfox_cn_zldt_5220221"       : { color:0x979797, rough:0.3 },   // 狐模网-www.3dfox.cn-zldt-5220221
       "vray_ChenZc_200606_DCZ22"            : { color:0x676462, rough:0.04 },   // vray ChenZc-200606-DCZ22
       "vray_Decor_b17"                      : { color:0x727272, rough:0.04 },   // vray Decor b17
       "vray_Decor_b18"                      : { color:0xAEAEAE, rough:0.04 },   // vray Decor b18
       "vray_Decor_b19"                      : { color:0x565250, rough:0.04 },   // vray Decor b19
-      "vray_Decor_b20"                      : { color:0x040404, rough:0.04 },   // vray Decor b20
       "vray_Decor_b24"                      : { color:0x3E1A13, rough:0.04 },   // vray Decor b24
-      "vray_Decor_b27"                      : { color:0x7C7C7C, rough:0.04, opacity:0.3 },   // vray Decor b27
-      "vray_Decor_b28"                      : { color:0x050505, rough:0.04 },   // vray Decor b28
+      "vray_Decor_b27"                      : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // vray Decor b27
       "vray_Decor_b32"                      : { color:0xBFBCB9, rough:0.04 },   // vray Decor b32
       "vray_Decor_b33"                      : { color:0xBFBCB8, rough:0.04 },   // vray Decor b33
       "vray_Decor_b34"                      : { color:0xBFBCB8, rough:0.04 },   // vray Decor b34
@@ -182,7 +174,6 @@ window.ROOMMAT = {
     bed2: {
       "Aluminum_Polished"                   : { color:0xC1C1C1, rough:0.04 },   // Aluminum_Polished
       "Aluminum_Polished1"                  : { color:0xA8A8A8, rough:0.04 },   // Aluminum_Polished1
-      "Armchair_Coral_vray_Coral_Furniture" : { color:0x171717, rough:0.04 },   // Armchair Coral_vray_Coral_Furniture
       "BEIGE_dunhil_grey"                   : { color:0xB9B5AE, rough:0.1 },   // BEIGE dunhil grey
       "BEIGE_dunhil_grey_1"                 : { color:0xB9B5AE, rough:0.2 },   // BEIGE dunhil grey#1
       "CYF09080031"                         : { color:0xB2B2B2, rough:0.15 },   // CYF09080031
@@ -250,21 +241,18 @@ window.ROOMMAT = {
       "Marais_bed_vray_Marais_bed_006"      : { color:0x979797, rough:1.0 },   // Marais-bed_vray_Marais bed-006
       "Marais_bed_vray_Marais_bed_007"      : { color:0x979797, rough:1.0 },   // Marais-bed_vray_Marais bed-007
       "Marais_bed_vray_Marais_bed_009"      : { color:0x5E3E00, rough:0.53 },   // Marais-bed_vray_Marais bed-009
-      "Marais_bed_vray_Marais_bed_011"      : { color:0x111111, rough:0.22 },   // Marais-bed_vray_Marais bed-011
       "Plain_White_Sheer_3769679_28cm_2"    : { color:0xC7CACA, rough:0.04 },   // Plain White Sheer 3769679 28cm#2
       "Plain_White_Texture_2281256_44cm1"   : { color:0xC4C5C0, rough:0.04 },   // Plain White Texture 2281256 44cm1
       "R192_G192_B192"                      : { color:0x9B9B9B, rough:0.04 },   // R192_G192_B192
       "THREAD_926F76CE_BF50_4c7a_A889_CF4CAA97EB5E_png3": { color:0x9C9C9C, rough:0.04 },   // THREAD-926F76CE-BF50-4c7a-A889-CF4CAA97EB5E.png3
       "Two_Sided_3"                         : { color:0x686868, rough:0.04 },   // Two Sided#3
-      "_0136_Charcoal_3"                    : { color:0x181818, rough:0.25 },   // [0136_Charcoal]3
       "_1"                                  : { color:0x2B2B2B, rough:0.04 },   // *1
       "_2"                                  : { color:0x222222, rough:0.3 },   // *2
       "____www_3dfox_cn_zldt_25110011"      : { color:0x979797, rough:0.25 },   // 狐模网-www.3dfox.cn-zldt-25110011
       "____www_3dfox_cn_zldt_25110012"      : { color:0x979797, rough:0.04 },   // 狐模网-www.3dfox.cn-zldt-25110012
       "vray_Arm_cut"                        : { color:0x272727, rough:0.04 },   // vray_Arm cut
       "vray_ChenZc_200606_DCZ22"            : { color:0x676462, rough:0.25 },   // vray ChenZc-200606-DCZ22
-      "vray_Glass_2"                        : { color:0x010101, rough:0.04, opacity:0.3 },   // vray_Glass 2
-      "vray_Metall"                         : { color:0x070606, rough:0.04 },   // vray_Metall
+      "vray_Glass_2"                        : { color:0xC6CDD1, rough:0.04, opacity:0.3 },   // vray_Glass 2
       "vray_Plastic_Black"                  : { color:0x242424, rough:0.04 },   // vray_Plastic Black
       "vray_Plastic_Orang"                  : { color:0xCE2D02, rough:0.25 },   // vray_Plastic Orang
       "vray_rubber"                         : { color:0x7C7C7C, rough:0.04 },   // vray_rubber
@@ -275,7 +263,6 @@ window.ROOMMAT = {
       "Color_000"                           : { color:0xCECECE, rough:0.04 },   // [Color_000]
       "Color_004"                           : { color:0x737373, rough:0.04 },   // [Color_004]
       "Color_007"                           : { color:0x2F2F2F, rough:0.04 },   // [Color_007]
-      "Color_009"                           : { color:0x000000, rough:0.04 },   // [Color_009]
       "Color_D04"                           : { color:0xCEB97C, rough:0.04 },   // [Color_D04]
       "Floor_Beveled_Oak_Sonoma_34_83_350cm": { color:0x5D5447, rough:0.21 },   // Floor Beveled Oak Sonoma 34-83 350cm
       "GOLD_METAL_1"                        : { color:0x797169, rough:0.35 },   // GOLD METAL#1
@@ -294,9 +281,7 @@ window.ROOMMAT = {
       "THREAD_926F76CE_BF50_4c7a_A889_CF4CAA97EB5E_png3": { color:0x9C9C9C, rough:0.04 },   // THREAD-926F76CE-BF50-4c7a-A889-CF4CAA97EB5E.png3
       "_"                                   : { color:0x5B5F62, rough:0.04 },   // *
       "_0130_Gainsboro_1"                   : { color:0xB2B2B2, rough:0.04 },   // [0130_Gainsboro]1
-      "_0136_Charcoal_3"                    : { color:0x181818, rough:0.25 },   // [0136_Charcoal]3
       "_Color_006_2"                        : { color:0x454545, rough:0.04 },   // [Color_006]2
-      "____m210109_04707"                   : { color:0x0B0B0B, rough:0.2 },   // 集简空间m210109-04707
       "_auto_1"                             : { color:0x545553, rough:0.04 },   // <auto>1
     },
   },
