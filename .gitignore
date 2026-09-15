@@ -7,3 +7,8 @@ build/
 # base64 twins of the GLBs, only needed to open index.html over file://.
 # On a web host they are dead weight (~46 MB) - the .glb files are served directly.
 *.glb.js
+
+# editor/agent backups and Blender autosaves - working files, not deliverables
+*.bak
+*.bak[0-9]
+*.blend1

@@ -400,10 +400,15 @@ scene.fog=new THREE.Fog(P.theme.bg,40,120);
 const camera=new THREE.PerspectiveCamera(42,1,.1,400);
 
 /* bounds */
-let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
-P.rooms.forEach(r=>{const p=r.plan;
+const O=P.overviewPlan||null;
+const layoutRooms=O?O.regions.map(region=>{
+  const room=P.rooms.find(r=>r.id===region.id);
+  return Object.assign({},room||{id:region.id,name:region.id,group:'open'},region);
+}):P.rooms;
+let minX=0,minY=0,maxX=O?O.width:-1e9,maxY=O?O.depth:-1e9;
+if(!O){minX=1e9;minY=1e9;P.rooms.forEach(r=>{const p=r.plan;
   minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);
-  maxX=Math.max(maxX,p.x+p.w);maxY=Math.max(maxY,p.y+p.d);});
+  maxX=Math.max(maxX,p.x+p.w);maxY=Math.max(maxY,p.y+p.d);});}
 const CX=(minX+maxX)/2, CY=(minY+maxY)/2, SPAN=Math.max(maxX-minX,maxY-minY);
 
 /* lights */
@@ -435,7 +440,34 @@ function mat(hex,rough=.82){return new THREE.MeshStandardMaterial({color:hex,rou
 const wallMat=()=>new THREE.MeshStandardMaterial({color:0xD9D0C2,roughness:.9,metalness:0,
   transparent:true,opacity:.30,side:THREE.DoubleSide});
 
-P.rooms.forEach(r=>{
+if(O){
+  const tex=new THREE.TextureLoader().load(O.image);
+  tex.encoding=THREE.sRGBEncoding;
+  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  const drawing=new THREE.Mesh(
+    new THREE.PlaneGeometry(O.width,O.depth),
+    new THREE.MeshBasicMaterial({map:tex,color:0xffffff,side:THREE.DoubleSide})
+  );
+  drawing.rotation.x=-Math.PI/2;
+  drawing.position.set(O.width/2,.018,O.depth/2);
+  scene.add(drawing);
+
+  const toWorld=([px,py])=>[px/O.sourceWidth*O.width,(1-py/O.sourceHeight)*O.depth];
+  layoutRooms.forEach(r=>{
+    const pts=r.poly.map(toWorld), shape=new THREE.Shape();
+    pts.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));
+    shape.closePath();
+    const col=new THREE.Color(GROUP[r.group]||GROUP.open);
+    const floorCol=col.clone().lerp(new THREE.Color(0xF2EDE4),.38);
+    const fm=new THREE.MeshStandardMaterial({color:floorCol,roughness:.88,metalness:0,
+      transparent:true,opacity:.055,depthWrite:false,side:THREE.DoubleSide});
+    const f=new THREE.Mesh(new THREE.ShapeGeometry(shape),fm);
+    f.rotation.x=-Math.PI/2; f.position.y=.045; f.userData.room=r.id;
+    pickable.push(f); scene.add(f);
+    const c=(r.label?toWorld(r.label):pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]));
+    roomMeshes[r.id]={group:f,floor:f,base:floorCol.getHex(),walls:null,center:new THREE.Vector3(c[0],0,c[1])};
+  });
+}else P.rooms.forEach(r=>{
   const p=r.plan, g=new THREE.Group();
   const col=new THREE.Color(GROUP[r.group]);
   const floorCol=col.clone().lerp(new THREE.Color(0xF2EDE4),.52);
@@ -452,18 +484,19 @@ P.rooms.forEach(r=>{
     wall.position.set(cx,H/2,cy); wall.castShadow=true; g.add(wall);
   });
 
-  /* top edge trim to read the outline cleanly */
   const eg=new THREE.EdgesGeometry(new THREE.BoxGeometry(p.w,.02,p.d));
   const line=new THREE.LineSegments(eg,new THREE.LineBasicMaterial({color:0xC9A227,transparent:true,opacity:.34}));
   line.position.set(p.x+p.w/2,H,p.y+p.d/2); g.add(line);
 
   scene.add(g);
-  roomMeshes[r.id]={group:g,floor:f,base:floorCol.getHex(),walls:wm};
+  roomMeshes[r.id]={group:g,floor:f,base:floorCol.getHex(),walls:wm,
+    center:new THREE.Vector3(p.x+p.w/2,0,p.y+p.d/2)};
 });
 
 /* labels as sprites */
-P.rooms.forEach(r=>{
-  if(r.plan.w*r.plan.d < 3) return;
+layoutRooms.forEach(r=>{
+  if(!O&&r.plan.w*r.plan.d < 3) return;
+  if(O&&!['master','bed1','bed2','bed3','living','dining','kitchen','balcony'].includes(r.id))return;
   const cv=document.createElement('canvas');cv.width=512;cv.height=128;
   const x=cv.getContext('2d');
   x.fillStyle='rgba(20,17,14,.82)';
@@ -473,14 +506,15 @@ P.rooms.forEach(r=>{
   x.fillText(r.name.toUpperCase(),256,64);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({
     map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
-  sp.position.set(r.plan.x+r.plan.w/2,H+.55,r.plan.y+r.plan.d/2);
-  sp.scale.set(2.5,.62,1);
+  const c=roomMeshes[r.id].center;
+  sp.position.set(c.x,O ? 0.42 : H+0.55,c.z);
+  sp.scale.set(O ? 2.1 : 2.5,O ? 0.52 : 0.62,1);
   sp.renderOrder=999;
   scene.add(sp);
 });
 
 /* ---------- hand-rolled orbit ---------- */
-let yaw=-0.72, pitch=0.92, dist=SPAN*1.62;
+let yaw=-0.72, pitch=O?0.30:0.92, dist=SPAN*1.62;
 const target=new THREE.Vector3(CX,0,CY);
 let drag=null,lx=0,ly=0;
 
@@ -556,7 +590,8 @@ function paint(){
     const on=r.id===activeId, hv=r.id===hoverId;
     m.floor.material.color.setHex(m.base);
     m.floor.material.emissive.setHex(on?0x6B5416:hv?0x352A0E:0x000000);
-    m.walls.opacity = on?.60:hv?.44:.30;
+    m.floor.material.opacity=O?(on?.28:hv?.16:.055):1;
+    if(m.walls)m.walls.opacity = on?.60:hv?.44:.30;
   });
 }
 
@@ -583,7 +618,8 @@ function selectRoom(id,fromList){
   $('#dtour').classList.toggle('show',!!(window.ROOMTOUR||{})[r.id]);
   $('#drawer').classList.add('open');
   if(view==='3d'&&fromList){
-    target.set(r.plan.x+r.plan.w/2,H*0.42,r.plan.y+r.plan.d/2);
+    const m=roomMeshes[r.id],c=m&&m.center;
+    target.set(c?c.x:r.plan.x+r.plan.w/2,O ? 0.08 : H*0.42,c?c.z:r.plan.y+r.plan.d/2);
     dist=Math.max(SPAN*.62,Math.max(r.plan.w,r.plan.d)*4.6); updateCam();
   }
 }
