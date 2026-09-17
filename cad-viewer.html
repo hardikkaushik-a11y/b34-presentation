@@ -177,7 +177,25 @@ const CLIP_EXTEND={bed3:{y1:1.45}};
 function overlayClip(root,rid,on){const ex=CLIP_EXTEND[rid]||{},p=data.rooms[rid].boundary_xy,x=p.map(v=>v[0]),y=p.map(v=>v[1]),planes=on?[new THREE.Plane(new THREE.Vector3(1,0,0),-Math.min(...x)),new THREE.Plane(new THREE.Vector3(-1,0,0),Math.max(...x)),new THREE.Plane(new THREE.Vector3(0,0,-1),-Math.min(...y)),new THREE.Plane(new THREE.Vector3(0,0,1),Math.max(...y)+(ex.y1||0))]:null;root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){m.clippingPlanes=planes;m.clipIntersection=false;m.needsUpdate=true}})}
 function home(top=false){photoMode=false;$('photo').style.display='none';$('photo').textContent='Step into the photoreal 360';if(SKY_ENV)scene.environment=SKY_ENV;activeRoom=null;if(shell)shell.visible=true;Object.entries(loaded).forEach(([rid,r])=>{r.visible=modelsVisible;overlayClip(r,rid,true)});$('models').textContent=modelsVisible?'Hide bedroom models':'Show bedroom models';setMode(top?'top':'orbit');aimSun(9,-7.3);target.set(9,0,-7.3);yaw=top?0:.62;pitch=top?Math.PI/2-.001:.8;fit()}
 function canWalk(x,z){if(activeRoom){const n=window.ROOMNAV[activeRoom],t=data.transforms[activeRoom].translation_xyz,lx=x-t[0],ly=-(z-t[2]);for(const [dx,dy] of [[0,0],[.12,0],[-.12,0],[0,.12],[0,-.12]]){const a=Math.floor((lx+dx-n.min[0])/n.cell),b=Math.floor((ly+dy-n.min[1])/n.cell);if(a<0||b<0||a>=n.w||b>=n.h||n.grid[b*n.w+a]!=='0')return false;}return true;}const gx=Math.floor(x/nav.cell_m),gy=Math.floor(-z/nav.cell_m);return gx>=0&&gy>=0&&gx<nav.width&&gy<nav.height&&nav.grid[gy][gx]==='0'}
-function startWalk(){$('load').textContent='Walking the neutral CAD shell. Bedroom buttons open furnished rooms.';activeRoom=null;modelsVisible=false;if(shell)shell.visible=true;Object.values(loaded).forEach(r=>r.visible=false);$('models').textContent='Show bedroom models';setMode('walk');const route=nav.results.dining.route_xy,a=route[0],b=route[Math.min(20,route.length-1)];camera.position.set(a[0],1.6,-a[1]);yaw=tYaw=Math.atan2(-(b[0]-a[0]),b[1]-a[1]);pitch=tPitch=0;vx=vz=0;look()}
+/* Walking the flat used to hide every furnished room, so you could walk from the
+   front door through four empty boxes while their beds and wardrobes sat loaded
+   in memory a metre away. That made sense when this was a neutral CAD review
+   tool and the shell was the point. It is wrong for anyone being shown the
+   flat. Bring the rooms with you, each still clipped to its own boundary so
+   furniture cannot poke through a wall into the corridor. */
+async function startWalk(){
+ activeRoom=null;if(shell)shell.visible=true;
+ const ids=Object.keys(data.transforms);
+ if(ids.some(r=>!loaded[r])){
+  $('load').textContent='Loading the furnished rooms…';
+  try{await Promise.all(ids.map(rid=>room(rid)))}
+  catch(e){$('load').textContent='Some rooms did not load: '+e.message}
+ }
+ modelsVisible=true;
+ Object.entries(loaded).forEach(([rid,r])=>{r.visible=true;overlayClip(r,rid,true)});
+ $('models').textContent='Hide bedroom models';
+ $('load').textContent='Walking the flat. The designed bedrooms are furnished; the rest is shell only.';
+ setMode('walk');const route=nav.results.dining.route_xy,a=route[0],b=route[Math.min(20,route.length-1)];camera.position.set(a[0],1.6,-a[1]);yaw=tYaw=Math.atan2(-(b[0]-a[0]),b[1]-a[1]);pitch=tPitch=0;vx=vz=0;look()}
 function look(){camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0)}
 function palette(root,rid){root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){const exact=window.ROOMMAT?.rooms?.[rid]?.[m.name];/* her own V-Ray values fill what the hand-tuned palette never covered, but never over a real texture */const vray=!exact&&!m.map&&window.ROOMMAT?.vray?.[rid]?.[m.name];const e=exact||vray||(!m.map&&window.ROOMMAT?.common?.find(e=>m.name.toLowerCase().includes(e.match)));if(e){if(exact)m.map=null;m.color.setHex(e.color);if(e.rough!==undefined)m.roughness=e.rough;if(e.metal)m.metalness=1;/* glazing: r128 MeshStandard has no transmission, so approximate with alpha. Without this a window is an opaque slab. */if(e.opacity!==undefined){m.transparent=true;m.opacity=e.opacity;m.depthWrite=false;}}/* A smooth surface should take more from the environment - that is what makes glazing read as bright rather than as a hole. A matte one should take much less: at .85 the environment lit every face of every object almost equally, which filled the sun's shadows straight back in and left the room flat. Keep the glazing value, drop the diffuse one so the key light defines form. */if(m.isMeshStandardMaterial){m.envMapIntensity=m.roughness<.3?1.5:.34;m.needsUpdate=true}m.side=THREE.DoubleSide;m.needsUpdate=true}})}
 async function room(rid){if(loaded[rid])return loaded[rid];const t=data.transforms[rid];const root=await loadGLB('assets/rooms/'+rid+'.glb');palette(root,rid);root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});root.position.fromArray(t.translation_xyz);root.rotation.fromArray(t.rotation_xyz);root.visible=modelsVisible;scene.add(root);loaded[rid]=root;return root}
@@ -231,7 +249,13 @@ for(const rid of ids){const r=flat.rooms[rid],has=!!data.transforms[rid];
  b.innerHTML=(has?'\u25c6 ':'')+r.name+' <span style="color:var(--muted);font-size:11px">'+r.area_m2+' m\u00b2'+(r.source==='inferred'?' \u00b7 extent inferred':'')+'</span>';
  b.title=has?'Furnished model':'Shell only, '+(r.source==='inferred'?'extent read off ALD-01':'extent from the drawing');
  b.onclick=()=>has?visit(rid):gotoShellRoom(rid);$('rooms').append(b);
- if(rid==='master'){const st=document.createElement('button');st.innerHTML='\u25c6 Master study';st.onclick=()=>visit('master',true);$('rooms').append(st)}}$('load').textContent='Shell ready. Models load on demand.';home()}catch(e){$('load').textContent='Could not load draft. Open through the local server, not file://.';console.error(e)}
+ if(rid==='master'){const st=document.createElement('button');st.innerHTML='\u25c6 Master study';st.onclick=()=>visit('master',true);$('rooms').append(st)}}$('load').textContent='Shell ready.';home();
+/* Pull the furnished rooms in quietly while the visitor is still looking at the
+   plan, so pressing Walk does not stall on 36 MB. Failure here is not fatal -
+   startWalk loads anything still missing and reports it there. */
+Promise.all(Object.keys(data.transforms).map(rid=>room(rid).then(r=>{
+  r.visible=modelsVisible;overlayClip(r,rid,true);
+}).catch(()=>{}))).then(()=>{if(mode==='orbit')$('load').textContent='Shell and bedroom models ready.'});}catch(e){$('load').textContent='Could not load draft. Open through the local server, not file://.';console.error(e)}
 $('overview').onclick=()=>home();$('top').onclick=()=>home(true);$('planBtn').onclick=()=>setMode('plan');$('walk').onclick=startWalk;$('models').onclick=toggleModels;$('photo').onclick=togglePhoto;
 /* The polished presentation owns the visible navigation. This viewer stays focused
    on rendering and accepts small, explicit commands from its parent page. */
