@@ -237,7 +237,14 @@ async function startWalk(){
   catch(e){$('load').textContent='Some rooms did not load: '+e.message}
  }
  modelsVisible=true;
- Object.entries(loaded).forEach(([rid,r])=>{r.visible=true;overlayClip(r,rid,true)});
+ /* Clipped to the traced room boundary, the walk was cutting real joinery off
+    every room: 0.38 m of Bedroom 2's slim wardrobe beside the window, 0.63 m
+    from the Master and Bedroom 1, 1.57 m from Bedroom 3. The boundary is a
+    trace of a 2D plan, the model is the design, and where they disagree the
+    design wins. visit() has always shown these rooms unclipped for the same
+    reason. The overhangs are mostly inside wall thickness, so nothing visibly
+    bleeds into the corridor. */
+ Object.entries(loaded).forEach(([rid,r])=>{r.visible=true;overlayClip(r,rid,false)});
  $('models').textContent='Hide bedroom models';
  $('load').textContent='Walking the flat. The designed bedrooms are furnished; the rest is shell only.';
  setMode('walk');const route=nav.results.dining.route_xy,a=route[0],b=route[Math.min(20,route.length-1)];camera.position.set(a[0],1.6,-a[1]);yaw=tYaw=Math.atan2(-(b[0]-a[0]),b[1]-a[1]);pitch=tPitch=0;vx=vz=0;look()}
