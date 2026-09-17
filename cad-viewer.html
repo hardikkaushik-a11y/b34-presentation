@@ -218,8 +218,13 @@ function setMode(m){mode=m;camera.fov=m==='walk'?72:48;camera.updateProjectionMa
    13.20 while its own balcony wall and glazing sit at 13.32 to 14.52, so the clip was
    deleting them and leaving the room open to view. Extend the box where a room
    legitimately continues past its boundary. */
-const CLIP_EXTEND={bed3:{y1:1.45}};
-function overlayClip(root,rid,on){const ex=CLIP_EXTEND[rid]||{},p=data.rooms[rid].boundary_xy,x=p.map(v=>v[0]),y=p.map(v=>v[1]),planes=on?[new THREE.Plane(new THREE.Vector3(1,0,0),-Math.min(...x)),new THREE.Plane(new THREE.Vector3(-1,0,0),Math.max(...x)),new THREE.Plane(new THREE.Vector3(0,0,-1),-Math.min(...y)),new THREE.Plane(new THREE.Vector3(0,0,1),Math.max(...y)+(ex.y1||0))]:null;root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){m.clippingPlanes=planes;m.clipIntersection=false;m.needsUpdate=true}})}
+/* Bedroom 2's slim wardrobe beside the window sits 0.38 m past the traced
+   boundary on the window side, so clipping to the boundary sliced it off. That
+   side backs onto wall thickness and the ensuite, not circulation, so extending
+   it cannot put anything into a corridor. Measured from bed2.glb's own bounds
+   against flat-rooms.json; every other side of every room is left clipped. */
+const CLIP_EXTEND={bed3:{y1:1.45},bed2:{x1:0.42}};
+function overlayClip(root,rid,on){const ex=CLIP_EXTEND[rid]||{},p=data.rooms[rid].boundary_xy,x=p.map(v=>v[0]),y=p.map(v=>v[1]),planes=on?[new THREE.Plane(new THREE.Vector3(1,0,0),-(Math.min(...x)-(ex.x0||0))),new THREE.Plane(new THREE.Vector3(-1,0,0),Math.max(...x)+(ex.x1||0)),new THREE.Plane(new THREE.Vector3(0,0,-1),-Math.min(...y)),new THREE.Plane(new THREE.Vector3(0,0,1),Math.max(...y)+(ex.y1||0))]:null;root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){m.clippingPlanes=planes;m.clipIntersection=false;m.needsUpdate=true}})}
 function home(top=false){photoMode=false;$('photo').style.display='none';$('photo').textContent='Step into the photoreal 360';if(SKY_ENV)scene.environment=SKY_ENV;activeRoom=null;if(shell)shell.visible=true;Object.entries(loaded).forEach(([rid,r])=>{r.visible=modelsVisible;overlayClip(r,rid,true)});$('models').textContent=modelsVisible?'Hide bedroom models':'Show bedroom models';setMode(top?'top':'orbit');aimSun(9,-7.3);target.set(9,0,-7.3);yaw=top?0:.62;pitch=top?Math.PI/2-.001:.8;fit()}
 function canWalk(x,z){if(activeRoom){const n=window.ROOMNAV[activeRoom],t=data.transforms[activeRoom].translation_xyz,lx=x-t[0],ly=-(z-t[2]);for(const [dx,dy] of [[0,0],[.12,0],[-.12,0],[0,.12],[0,-.12]]){const a=Math.floor((lx+dx-n.min[0])/n.cell),b=Math.floor((ly+dy-n.min[1])/n.cell);if(a<0||b<0||a>=n.w||b>=n.h||n.grid[b*n.w+a]!=='0')return false;}return true;}const gx=Math.floor(x/nav.cell_m),gy=Math.floor(-z/nav.cell_m);return gx>=0&&gy>=0&&gx<nav.width&&gy<nav.height&&nav.grid[gy][gx]==='0'}
 /* Walking the flat used to hide every furnished room, so you could walk from the
