@@ -1477,8 +1477,13 @@ $('#texit').onclick=exitTour;
 $('#dtour').onclick=()=>{
   const r=P.rooms.find(x=>x.id===activeId);
   if(!r)return;
-  if(r.id==='bed2'&&(window.ROOMTOUR||{})[r.id]?.source==='vray'){
-    location.href='tour.html?room=bed2';
+  /* Any room with real V-Ray panoramas gets the premium tour page. This used to
+     name bed2 explicitly, so Bedroom 3 fell through to the old inline viewer
+     and looked completely different - minimap, numbered markers, "point 1 of
+     2" - beside Bedroom 2's named viewpoints. The flag decides now, so Master
+     and Bedroom 1 join automatically when their panoramas land. */
+  if((window.ROOMTOUR||{})[r.id]?.source==='vray'){
+    location.href='tour.html?room='+encodeURIComponent(r.id);
     return;
   }
   enterTour(r);

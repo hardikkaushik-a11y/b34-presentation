@@ -89,7 +89,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ivory);outline-offs
   <div class="topbar">
     <div class="identity">
       <div class="monogram">SS</div>
-      <div><div class="eyebrow">B-34 · Dwarka</div><h1 class="title">Bedroom 2</h1></div>
+      <div><div class="eyebrow">B-34 · Dwarka</div><h1 class="title" data-room-name>Bedroom 2</h1></div>
     </div>
     <div class="tools">
       <button class="icon-btn" id="plan-btn" aria-expanded="false" aria-controls="plan-panel">Room plan</button>
@@ -100,7 +100,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ivory);outline-offs
   <section id="intro" aria-live="polite">
     <div class="kicker">Private residential interior</div>
     <h2>Step inside.</h2>
-    <p>Drag to look around. Move between the bed and desk to experience the room from both sides.</p>
+    <p data-room-intro>Drag to look around. Move between the viewpoints to see the room from both sides.</p>
   </section>
 
   <button id="move" aria-label="Move to the next position">
@@ -114,17 +114,42 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ivory);outline-offs
   </div>
 
   <aside id="plan-panel" aria-hidden="true">
-    <header><h3>Bedroom 2</h3><small>11′-0″ × 14′-9½″</small></header>
+    <header><h3 data-room-name>Bedroom 2</h3><small data-room-dims>11′-0″ × 14′-9½″</small></header>
     <canvas id="mini" width="448" height="500" aria-label="Clickable room plan"></canvas>
     <p class="plan-help">Select either brass marker to move to that position.</p>
   </aside>
 </main>
 <script src="assets/lib/three.min.js"></script>
+<script src="project.js"></script>
 <script src="rooms-tour.js"></script>
 <script>
 (()=>{
-  const data=window.ROOMTOUR&&window.ROOMTOUR.bed2;
-  if(!data||!data.points||!data.points.length){document.querySelector('#loading').textContent='Bedroom 2 panoramas are unavailable';return;}
+  /* Serves whichever room it is pointed at. It used to read window.ROOMTOUR.bed2
+     and print "Bedroom 2" in seven places, so Bedroom 3's tour button opened
+     Bedroom 2 - and every future room would have needed this file edited again.
+     The room comes from ?room=, its name and dimensions from project.js. */
+  const ROOM=new URLSearchParams(location.search).get('room')||'bed2';
+  const data=window.ROOMTOUR&&window.ROOMTOUR[ROOM];
+  const meta=((window.PROJECT&&window.PROJECT.rooms)||[]).find(r=>r.id===ROOM)||{};
+  const ROOM_NAME=meta.name||(data&&data.label)||'This room';
+  const ROOM_DIMS=(meta.dims&&meta.dims!=='-')?meta.dims:'';
+  if(!data||!data.points||!data.points.length){document.querySelector('#loading').textContent=ROOM_NAME+' panoramas are unavailable';return;}
+  document.title=ROOM_NAME+' \u00b7 B-34 \u00b7 Studio Spindle';
+  document.querySelectorAll('[data-room-name]').forEach(e=>e.textContent=ROOM_NAME);
+  document.querySelectorAll('[data-room-dims]').forEach(e=>e.textContent=ROOM_DIMS);
+  const vw=document.getElementById('viewer');
+  if(vw)vw.setAttribute('aria-label','Photoreal 360 degree tour of '+ROOM_NAME);
+  /* The intro named Bedroom 2's own furniture. Stitching the viewpoint labels
+     into a sentence read worse than saying nothing - "move between bed and
+     wardrobe and bed, desk and window" - because the labels contain their own
+     commas and ands. Count them instead; the labels are on the buttons anyway. */
+  const intro=document.querySelector('[data-room-intro]');
+  if(intro){
+    const n=data.points.length;
+    intro.textContent=n>1
+      ? 'Drag to look around. Move between the '+(n===2?'two':n)+' viewpoints to see the room from more than one position.'
+      : 'Drag to look around.';
+  }
   const $=s=>document.querySelector(s), canvas=$('#pano'), veil=$('#veil'), loading=$('#loading');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -179,7 +204,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ivory);outline-offs
       loading.style.opacity=0;veil.classList.add('ready');$('#intro').classList.add('show');
       setTimeout(()=>$('#intro').classList.remove('show'),4200);
       data.points.forEach((_,i)=>{if(i)loadTexture(i)});
-    }catch(e){loading.textContent='Bedroom 2 could not be opened'}
+    }catch(e){loading.textContent=ROOM_NAME+' could not be opened'}
   }
 
   canvas.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);$('#intro').classList.remove('show')});
