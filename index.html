@@ -1534,7 +1534,17 @@ dist=fitDistance();
 target.set(CX,H*0.42,CY);
 updateCam();paint();
 addEventListener('resize',()=>{if(!activeId){dist=fitDistance();updateCam();}});
-(function loop(){requestAnimationFrame(loop);renderer.render(scene,camera);})();
+/* The traced pseudo-3D scene is parked - setView hides its canvas
+   unconditionally and the CAD viewer in the iframe is what is actually shown.
+   This loop was still rendering it every frame anyway, so the page was paying
+   for a full scene nobody sees while the iframe rendered the real one beside
+   it. That is why the walk ran slower here than in the standalone viewer,
+   which has no such competitor. Render only when its canvas is on screen. */
+let parkedFrames=0;
+(function loop(){requestAnimationFrame(loop);
+  if(canvas.style.display==='none'||!canvas.offsetParent)return;
+  parkedFrames++;renderer.render(scene,camera);})();
+window.__b34ParkedFrames=()=>parkedFrames;
 </script>
 </body>
 </html>
