@@ -246,16 +246,14 @@ async function startWalk(){
     you reach them. Waiting for all four meant a stall on every visit. */
  modelsVisible=true;
  ids.filter(r=>!loaded[r]).forEach(rid=>room(rid).then(r=>{
-   if(modelsVisible){r.visible=true;overlayClip(r,rid,false)}
+   if(modelsVisible){r.visible=true;overlayClip(r,rid,true)}
  }).catch(()=>{}));
- /* Clipped to the traced room boundary, the walk was cutting real joinery off
-    every room: 0.38 m of Bedroom 2's slim wardrobe beside the window, 0.63 m
-    from the Master and Bedroom 1, 1.57 m from Bedroom 3. The boundary is a
-    trace of a 2D plan, the model is the design, and where they disagree the
-    design wins. visit() has always shown these rooms unclipped for the same
-    reason. The overhangs are mostly inside wall thickness, so nothing visibly
-    bleeds into the corridor. */
- Object.entries(loaded).forEach(([rid,r])=>{r.visible=true;overlayClip(r,rid,false)});
+ /* Clip back on. Taking it off to save Bedroom 2's slim wardrobe let the
+    rooms' overhangs show in circulation instead - Bedroom 1 reaches 0.63 m past
+    its boundary and that stub appeared as a wall standing in front of the room.
+    A clipped wardrobe is a smaller problem than a wall out of nowhere. The
+    room view still shows every room unclipped and complete. */
+ Object.entries(loaded).forEach(([rid,r])=>{r.visible=true;overlayClip(r,rid,true)});
  $('models').textContent='Hide bedroom models';
  $('load').textContent='Walking the flat. The designed bedrooms are furnished; the rest is shell only.';
  setMode('walk');/* route[0] is the only point guaranteed to be on a walkable cell - stepping
@@ -324,7 +322,7 @@ for(const rid of ids){const r=flat.rooms[rid],has=!!data.transforms[rid];
    only a few hundred KB. Failure here is not fatal - startWalk loads anything
    still missing and reports it there. */
 const preloadRooms=()=>Promise.all(Object.keys(data.transforms).map(rid=>room(rid).then(r=>{
-  r.visible=modelsVisible;overlayClip(r,rid,false);
+  r.visible=modelsVisible;overlayClip(r,rid,true);
 }).catch(()=>{}))).then(()=>{
   if(mode==='orbit')$('load').textContent='Shell and bedroom models ready.';
   /* everything heavy is in; from two seconds hence a slow frame means the
