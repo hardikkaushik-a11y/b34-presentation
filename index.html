@@ -1450,7 +1450,15 @@ function exitTour(){
   cancelAnimationFrame(trraf); trraf=0;
 }
 $('#texit').onclick=exitTour;
-$('#dtour').onclick=()=>{const r=P.rooms.find(x=>x.id===activeId); if(r)enterTour(r);};
+$('#dtour').onclick=()=>{
+  const r=P.rooms.find(x=>x.id===activeId);
+  if(!r)return;
+  if(r.id==='bed2'&&(window.ROOMTOUR||{})[r.id]?.source==='vray'){
+    location.href='tour.html?room=bed2';
+    return;
+  }
+  enterTour(r);
+};
 
 $('#ctour').addEventListener('mousedown',e=>{TR.drag=1;TR.lx=e.clientX;TR.ly=e.clientY;});
 addEventListener('mouseup',()=>TR.drag=null);

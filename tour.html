@@ -3,123 +3,209 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>B-34 Virtual Tour · Studio Spindle</title>
-<script src="assets/lib/three.min.js"></script>
+<meta name="theme-color" content="#17130f">
+<title>Bedroom 2 · B-34 · Studio Spindle</title>
 <style>
-*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}
-:root{--ink:#15120f;--paper:#f5f1e9;--brass:#c7a86b;--line:rgba(255,255,255,.22);--glass:rgba(20,17,14,.72)}
-body{background:#111;color:var(--paper);font-family:"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
-button{font:inherit}button:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
-#view,#pano{position:absolute;inset:0;width:100%;height:100%;display:block}
-#pano{cursor:grab}#pano:active{cursor:grabbing}
-#shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.34),transparent 24%,transparent 68%,rgba(0,0,0,.52));z-index:1}
-#veil{position:absolute;inset:0;background:#17130f;opacity:0;pointer-events:none;z-index:9;transition:opacity .24s ease}
-#veil.on{opacity:.88}
-#brand{position:absolute;top:24px;left:86px;z-index:4;display:flex;align-items:center;gap:14px;pointer-events:none}
-#brand b{font-size:20px;font-weight:400;letter-spacing:.22em}#brand i{display:block;width:34px;height:1px;background:var(--brass)}
-#brand span{font-size:9px;line-height:1.5;letter-spacing:.17em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-#rail{position:absolute;left:0;top:0;bottom:0;width:60px;z-index:5;background:rgba(247,245,240,.92);backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;padding:13px 0;box-shadow:3px 0 22px rgba(0,0,0,.12)}
-#monogram{width:36px;height:36px;border:1px solid #40382e;color:#2a241e;display:grid;place-items:center;font:500 12px/1 Georgia,serif;letter-spacing:.08em;margin-bottom:20px}
-.tool{width:44px;height:44px;border:0;background:transparent;color:#28231d;display:grid;place-items:center;cursor:pointer;position:relative;border-radius:50%;transition:.2s}
-.tool:hover,.tool.on{background:#e8dfd0;color:#000}.tool svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.6}
-.tool:after{content:attr(aria-label);position:absolute;left:52px;top:11px;white-space:nowrap;background:#17130f;color:white;padding:7px 9px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:0;pointer-events:none;transform:translateX(-5px);transition:.15s}
-.tool:hover:after{opacity:1;transform:none}.spacer{flex:1}
-#hotspots{position:absolute;inset:0;z-index:3;pointer-events:none}
-.hotspot{position:absolute;width:62px;height:62px;margin:-31px;border:0;background:transparent;pointer-events:auto;cursor:pointer;transition:transform .18s ease;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
-.hotspot:hover{transform:scale(1.12)}.hotspot .ring{position:absolute;inset:5px;border:2px solid rgba(255,255,255,.94);border-radius:50%;background:rgba(27,23,18,.16);box-shadow:inset 0 0 0 5px rgba(255,255,255,.14)}
-.hotspot .arrow{position:absolute;left:22px;top:19px;width:17px;height:17px;border-top:3px solid white;border-right:3px solid white;transform:rotate(-45deg)}
-.hotspot em{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:rgba(20,17,14,.8);color:white;font-style:normal;font-size:9px;letter-spacing:.1em;white-space:nowrap;padding:5px 7px;opacity:0;transition:.15s}
-.hotspot:hover em{opacity:1}
-#place{position:absolute;left:84px;bottom:24px;z-index:4;text-shadow:0 2px 12px rgba(0,0,0,.65)}
-#place small{display:block;color:var(--brass);font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:7px}
-#place strong{font:400 22px/1.1 Georgia,serif}#place span{font-size:11px;color:rgba(255,255,255,.72);margin-left:10px}
-#controls{position:absolute;right:24px;bottom:22px;z-index:4;display:flex;gap:8px}
-.pill{height:38px;border:1px solid rgba(255,255,255,.34);background:var(--glass);color:white;padding:0 14px;cursor:pointer;backdrop-filter:blur(10px);font-size:9px;letter-spacing:.14em;text-transform:uppercase;transition:.18s}
-.pill:hover,.pill.on{border-color:var(--brass);background:rgba(199,168,107,.25)}
-#progress{position:absolute;left:60px;right:0;top:0;height:2px;background:transparent;z-index:10}#progress i{display:block;height:100%;width:0;background:var(--brass);transition:width .25s}
-#load{position:absolute;inset:0;z-index:12;display:grid;place-items:center;background:#17130f;transition:opacity .4s}
-#load.hide{opacity:0;pointer-events:none}#load div{text-align:center}#load b{display:block;font:400 32px/1 Georgia,serif;letter-spacing:.08em;margin-bottom:12px}#load span{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#a89d8c}
-.panel{position:absolute;z-index:8;top:0;bottom:0;left:60px;width:min(420px,calc(100vw - 60px));background:rgba(242,237,228,.97);color:#211c17;transform:translateX(-105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:14px 0 40px rgba(0,0,0,.22);overflow:auto;padding:34px}
-.panel.open{transform:none}.panel header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #cfc5b5;padding-bottom:19px;margin-bottom:23px}
-.panel h2{font:400 28px/1 Georgia,serif;margin:0}.panel header button{border:0;background:none;font-size:22px;cursor:pointer;color:#5f5548}
-.eyebrow{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#90784e;margin-bottom:8px}
-.room{display:grid;grid-template-columns:42px 1fr auto;gap:13px;align-items:center;width:100%;border:0;border-bottom:1px solid #d8d0c3;background:transparent;text-align:left;padding:15px 0;cursor:pointer;color:#241f1a}
-.room:hover .num,.room.current .num{background:#211c17;color:white}.num{width:34px;height:34px;border:1px solid #9d907f;border-radius:50%;display:grid;place-items:center;font-size:10px;transition:.18s}.room b{display:block;font-size:14px;font-weight:500}.room span{display:block;font-size:10px;color:#786d60;margin-top:3px}.room i{font-style:normal;color:#90784e}
-#planimg{display:block;width:100%;height:auto;background:white;border:1px solid #d8d0c3;margin-bottom:20px}
-#refs{display:grid;grid-template-columns:1fr 1fr;gap:9px}.ref{border:0;padding:0;background:#ddd;aspect-ratio:4/3;overflow:hidden;cursor:zoom-in}.ref img{width:100%;height:100%;object-fit:cover;transition:.25s}.ref:hover img{transform:scale(1.035)}
-#lightbox{position:absolute;inset:0;z-index:20;background:rgba(10,9,8,.94);display:none;place-items:center;padding:30px}#lightbox.open{display:grid}#lightbox img{max-width:95vw;max-height:90vh;object-fit:contain}#lightbox button{position:absolute;right:20px;top:20px;border:1px solid #777;background:#17130f;color:white;width:42px;height:42px;cursor:pointer}
-#help p{font-size:13px;line-height:1.65;color:#5f5548}#help kbd{font:500 10px/1 monospace;border:1px solid #b8aa97;padding:3px 6px;background:white;color:#211c17}
-@media(max-width:700px){#rail{width:52px}#brand{left:68px;top:17px}#brand span,#brand i{display:none}#place{left:68px;bottom:72px}#place strong{font-size:18px}#place span{display:block;margin:5px 0 0}#controls{left:68px;right:12px;bottom:14px;overflow-x:auto}.pill{flex:0 0 auto}#progress{left:52px}.panel{left:52px;width:calc(100vw - 52px);padding:24px}.hotspot{width:54px;height:54px;margin:-27px}.hotspot .ring{inset:4px}.hotspot .arrow{left:19px;top:17px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+:root{
+  --ink:#17130f;
+  --ivory:#f5f0e7;
+  --paper:#e7ded1;
+  --sand:#cbbba5;
+  --bronze:#a9824e;
+  --glass:rgba(20,16,12,.62);
+  --line:rgba(245,240,231,.25);
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--ivory)}
+body{font-family:"Avenir Next",Avenir,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,a{font:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid var(--ivory);outline-offset:3px}
+#viewer,#pano{position:fixed;inset:0;width:100%;height:100%;display:block}
+#pano{cursor:grab;touch-action:none}
+#pano:active{cursor:grabbing}
+#veil{position:fixed;inset:0;z-index:8;background:#17130f;opacity:1;pointer-events:none;transition:opacity .8s cubic-bezier(.2,.7,.2,1)}
+#veil.ready{opacity:0}
+#veil.move{opacity:.86;transition-duration:.28s}
+
+.topbar{position:fixed;z-index:5;top:0;left:0;right:0;padding:24px 28px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;background:linear-gradient(rgba(12,10,8,.58),transparent)}
+.identity{pointer-events:auto;display:flex;align-items:flex-start;gap:18px;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+.monogram{width:42px;height:42px;border:1px solid rgba(245,240,231,.6);display:grid;place-items:center;font-family:"Iowan Old Style",Georgia,serif;font-size:18px;letter-spacing:.05em}
+.eyebrow{margin:1px 0 5px;color:var(--paper);font-size:9px;font-weight:600;letter-spacing:.24em;text-transform:uppercase}
+.title{margin:0;font-family:"Iowan Old Style",Georgia,serif;font-size:26px;font-weight:400;line-height:1}
+.tools{pointer-events:auto;display:flex;gap:9px}
+.icon-btn{height:42px;padding:0 16px;border:1px solid var(--line);border-radius:2px;background:rgba(17,14,11,.55);backdrop-filter:blur(10px);color:var(--ivory);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;transition:.2s}
+.icon-btn:hover,.icon-btn[aria-expanded="true"]{background:rgba(245,240,231,.92);color:var(--ink)}
+
+#intro{position:fixed;z-index:7;left:28px;top:50%;transform:translateY(-42%);width:min(410px,calc(100vw - 56px));pointer-events:none;text-shadow:0 2px 28px rgba(0,0,0,.62);opacity:0;transition:opacity .7s .35s}
+#intro.show{opacity:1}
+#intro .kicker{font-size:10px;letter-spacing:.25em;text-transform:uppercase;margin-bottom:12px}
+#intro h2{font-family:"Iowan Old Style",Georgia,serif;font-size:clamp(42px,5vw,72px);font-weight:400;line-height:.96;margin:0 0 17px}
+#intro p{font-size:13px;line-height:1.6;margin:0;color:rgba(245,240,231,.86)}
+
+.bottom{position:fixed;z-index:5;left:0;right:0;bottom:0;padding:52px 28px 24px;background:linear-gradient(transparent,rgba(12,10,8,.76));display:grid;grid-template-columns:minmax(170px,1fr) auto minmax(170px,1fr);align-items:end;gap:18px;pointer-events:none}
+.scene-copy{min-width:0;text-shadow:0 2px 16px rgba(0,0,0,.7)}
+.scene-copy small{display:block;color:var(--sand);font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px}
+#scene-name{font-family:"Iowan Old Style",Georgia,serif;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stops{pointer-events:auto;display:flex;align-items:center;gap:4px;padding:5px;border:1px solid var(--line);border-radius:3px;background:rgba(17,14,11,.58);backdrop-filter:blur(12px)}
+.stop{position:relative;border:0;background:transparent;color:rgba(245,240,231,.68);padding:11px 16px 10px;border-radius:2px;cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;transition:.22s;white-space:nowrap}
+.stop:hover{color:var(--ivory);background:rgba(255,255,255,.08)}
+.stop.active{color:var(--ink);background:var(--ivory)}
+.hint{text-align:right;color:rgba(245,240,231,.7);font-size:9px;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+
+#move{position:fixed;z-index:4;left:50%;bottom:126px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:var(--ivory);cursor:pointer;filter:drop-shadow(0 3px 9px rgba(0,0,0,.6));transition:.2s}
+#move:hover{transform:translateX(-50%) translateY(-4px)}
+#move .ring{width:52px;height:28px;border:1px solid rgba(255,255,255,.88);border-radius:50%;display:grid;place-items:center;background:rgba(169,130,78,.28);box-shadow:0 0 0 8px rgba(255,255,255,.06)}
+#move .ring:before{content:"";width:7px;height:7px;border-top:1.5px solid #fff;border-right:1.5px solid #fff;transform:rotate(-45deg) translate(-1px,1px)}
+#move span:last-child{font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+
+#plan-panel{position:fixed;z-index:6;top:78px;right:28px;width:260px;padding:18px;border:1px solid var(--line);border-radius:3px;background:rgba(20,16,12,.82);backdrop-filter:blur(18px);box-shadow:0 16px 60px rgba(0,0,0,.32);opacity:0;transform:translateY(-8px);pointer-events:none;transition:.22s}
+#plan-panel.open{opacity:1;transform:none;pointer-events:auto}
+#plan-panel header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:13px}
+#plan-panel h3{font-family:"Iowan Old Style",Georgia,serif;font-size:19px;font-weight:400;margin:0}
+#plan-panel small{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand)}
+#mini{display:block;width:100%;height:250px;background:#1d1915;border:1px solid rgba(255,255,255,.12);cursor:pointer}
+.plan-help{margin:11px 0 0;color:rgba(245,240,231,.65);font-size:10px;line-height:1.5}
+
+#loading{position:fixed;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--paper);transition:opacity .3s}
+#loading:after{content:"";display:block;width:74px;height:1px;background:rgba(255,255,255,.2);margin:13px auto 0;box-shadow:inset 0 0 0 var(--ivory);animation:load 1.35s ease-in-out infinite}
+@keyframes load{50%{box-shadow:inset 74px 0 0 var(--ivory)}}
+
+@media(max-width:720px){
+  .topbar{padding:18px}.monogram{width:38px;height:38px}.title{font-size:21px}.tools .icon-btn:first-child{display:none}
+  #intro{left:18px;width:calc(100vw - 36px)}
+  .bottom{padding:45px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:stretch;gap:12px}
+  .scene-copy{display:none}.stops{width:100%;overflow:auto}.stop{flex:1;padding:11px 12px}.hint{display:none}
+  #move{bottom:116px}#plan-panel{top:70px;right:18px;left:18px;width:auto}#mini{height:220px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style>
 </head>
 <body>
-<main id="view">
-  <canvas id="pano" aria-label="Interactive 360 degree room view"></canvas>
-  <div id="shade"></div><div id="hotspots"></div><div id="veil"></div><div id="progress"><i></i></div>
-  <div id="brand"><b>B-34</b><i></i><span>Virtual residence<br>Studio Spindle</span></div>
-  <nav id="rail" aria-label="Tour controls">
-    <div id="monogram">SS</div>
-    <button class="tool" id="roomsBtn" aria-label="Rooms"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
-    <button class="tool" id="planBtn" aria-label="Floor plan"><svg viewBox="0 0 24 24"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg></button>
-    <button class="tool" id="refsBtn" aria-label="Design views"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 16l5-5 4 4 3-3 6 6M15.5 8.5h.01"/></svg></button>
-    <div class="spacer"></div>
-    <button class="tool" id="helpBtn" aria-label="How to use"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 114 1.5c-1.4 1-1.8 1.4-1.8 2.5M12 17h.01"/></svg></button>
-    <a class="tool" href="index.html" aria-label="Project overview"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7M8 12h12"/></svg></a>
-  </nav>
-  <div id="place"><small>Inside B-34</small><strong id="roomName">Master Bedroom</strong><span id="pointName"></span></div>
-  <div id="controls"><button class="pill" id="prevBtn">Previous</button><button class="pill" id="nextBtn">Next viewpoint</button><button class="pill" id="rotateBtn">Auto rotate</button><button class="pill" id="resetBtn">Face room</button><button class="pill" id="fullBtn">Fullscreen</button></div>
-  <div id="load"><div><b>B-34</b><span>Preparing the residence</span></div></div>
+<main id="viewer" aria-label="Photoreal 360 degree tour of Bedroom 2">
+  <canvas id="pano"></canvas>
+  <div id="veil"></div>
+  <div id="loading">Preparing the room</div>
+
+  <div class="topbar">
+    <div class="identity">
+      <div class="monogram">SS</div>
+      <div><div class="eyebrow">B-34 · Dwarka</div><h1 class="title">Bedroom 2</h1></div>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="plan-btn" aria-expanded="false" aria-controls="plan-panel">Room plan</button>
+      <a class="icon-btn" href="index.html" style="display:grid;place-items:center;text-decoration:none">Project</a>
+    </div>
+  </div>
+
+  <section id="intro" aria-live="polite">
+    <div class="kicker">Private residential interior</div>
+    <h2>Step inside.</h2>
+    <p>Drag to look around. Move between the bed and desk to experience the room from both sides.</p>
+  </section>
+
+  <button id="move" aria-label="Move to the next position">
+    <span class="ring"></span><span id="move-label">Move to desk and window</span>
+  </button>
+
+  <div class="bottom">
+    <div class="scene-copy"><small>Current view</small><div id="scene-name">Bed and wardrobe</div></div>
+    <nav class="stops" id="stops" aria-label="Room viewpoints"></nav>
+    <div class="hint">Drag to look · Scroll to zoom</div>
+  </div>
+
+  <aside id="plan-panel" aria-hidden="true">
+    <header><h3>Bedroom 2</h3><small>11′-0″ × 14′-9½″</small></header>
+    <canvas id="mini" width="448" height="500" aria-label="Clickable room plan"></canvas>
+    <p class="plan-help">Select either brass marker to move to that position.</p>
+  </aside>
 </main>
-
-<section class="panel" id="roomsPanel"><header><div><div class="eyebrow">Move through the project</div><h2>Bedrooms</h2></div><button aria-label="Close">×</button></header><div id="roomList"></div></section>
-<section class="panel" id="planPanel"><header><div><div class="eyebrow">Drawing ALD-01</div><h2>Floor plan</h2></div><button aria-label="Close">×</button></header><img id="planimg" alt="B-34 floor plan"><div id="planRooms"></div></section>
-<section class="panel" id="refsPanel"><header><div><div class="eyebrow">Architect's presentation</div><h2>Design views</h2></div><button aria-label="Close">×</button></header><div id="refs"></div></section>
-<section class="panel" id="help"><header><div><div class="eyebrow">Tour controls</div><h2>Look around</h2></div><button aria-label="Close">×</button></header><p>Drag the room to look in any direction. Scroll or pinch to zoom. Select a floor marker to move to the next viewpoint.</p><p><kbd>←</kbd> <kbd>→</kbd> rotate &nbsp; <kbd>1</kbd>-<kbd>9</kbd> jump to a point &nbsp; <kbd>Esc</kbd> close</p></section>
-<div id="lightbox"><button aria-label="Close image">×</button><img alt="Design reference"></div>
-
-<script src="project.js"></script>
+<script src="assets/lib/three.min.js"></script>
 <script src="rooms-tour.js"></script>
 <script>
-const P=window.PROJECT,T=window.ROOMTOUR,$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const rooms=P.rooms.filter(r=>T[r.id]);
-const state={room:null,data:null,idx:0,yaw:0,pitch:0,drag:false,x:0,y:0,tex:{},auto:false,lastInput:Date.now(),moving:false};
-const renderer=new THREE.WebGLRenderer({canvas:$('#pano'),antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputEncoding=THREE.sRGBEncoding;
-const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(72,1,.1,1000);
-const geometry=new THREE.SphereGeometry(100,72,48);geometry.scale(-1,1,1);
-const sphere=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0x15120f,side:THREE.DoubleSide}));scene.add(sphere);
+(()=>{
+  const data=window.ROOMTOUR&&window.ROOMTOUR.bed2;
+  if(!data||!data.points||!data.points.length){document.querySelector('#loading').textContent='Bedroom 2 panoramas are unavailable';return;}
+  const $=s=>document.querySelector(s), canvas=$('#pano'), veil=$('#veil'), loading=$('#loading');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(66,1,.1,1000);
+  const geometry=new THREE.SphereGeometry(100,72,48); geometry.scale(-1,1,1);
+  const sphere=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0x17130f}));
+  sphere.rotation.y=-Math.PI/2; scene.add(sphere);
+  let yaw=0,pitch=-.035,fov=66,drag=false,lx=0,ly=0,current=0,moving=false;
+  const arrivalYaw=[0,-.65],arrivalPitch=[-.035,-.26],arrivalFov=[68,76];
+  const textures=[],labels=data.points.map((p,i)=>p.label||(i===0?'Bed and wardrobe':'Desk and window'));
 
-function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
-addEventListener('resize',resize);resize();
-function closePanels(){$$('.panel').forEach(p=>p.classList.remove('open'));$$('.tool').forEach(b=>b.classList.remove('on'))}
-function panel(button,panel){button.onclick=()=>{const open=!panel.classList.contains('open');closePanels();if(open){panel.classList.add('open');button.classList.add('on')}};panel.querySelector('header button').onclick=closePanels}
-panel($('#roomsBtn'),$('#roomsPanel'));panel($('#planBtn'),$('#planPanel'));panel($('#refsBtn'),$('#refsPanel'));panel($('#helpBtn'),$('#help'));
+  function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+  addEventListener('resize',resize);resize();
 
-function roomButton(r,i){return `<button class="room" data-room="${r.id}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><b>${r.name}</b><span>${T[r.id].points.length} viewpoints · ${r.dims}</span></span><i>›</i></button>`}
-$('#roomList').innerHTML=rooms.map(roomButton).join('');$('#planRooms').innerHTML=rooms.map(roomButton).join('');$('#planimg').src=P.floorplanImage;
-$$('.room').forEach(b=>b.onclick=()=>{enterRoom(b.dataset.room,0);closePanels()});
+  function render(){requestAnimationFrame(render);camera.rotation.set(pitch,yaw,0,'YXZ');renderer.render(scene,camera)}
+  render();
 
-function preload(url){return new Promise((resolve,reject)=>new THREE.TextureLoader().load(url,t=>{t.mapping=THREE.UVMapping;t.encoding=THREE.sRGBEncoding;resolve(t)},undefined,reject))}
-async function texture(room,i){const key=room+':'+i;if(state.tex[key])return state.tex[key];$('#progress i').style.width='55%';const t=await preload(P.tourPath+T[room].points[i].file);state.tex[key]=t;$('#progress i').style.width='100%';setTimeout(()=>$('#progress i').style.width='0',250);return t}
-function nearest(){const here=state.data.points[state.idx];return state.data.points.map((p,i)=>({i,d:Math.hypot(p.x-here.x,p.y-here.y)})).filter(x=>x.i!==state.idx&&x.d>.34).sort((a,b)=>a.d-b.d).slice(0,3)}
-function buildHotspots(){const host=$('#hotspots');host.innerHTML='';const here=state.data.points[state.idx];nearest().forEach(({i,d})=>{const p=state.data.points[i],dx=p.x-here.x,dy=p.y-here.y;const b=document.createElement('button');b.className='hotspot';b.setAttribute('aria-label',`Move ${d.toFixed(1)} metres`);b.innerHTML=`<span class="ring"></span><span class="arrow"></span><em>${d.toFixed(1)} m</em>`;/* Ogulo presents destination markers near the doorway sightline. A literal floor-level point disappears below a 72-degree camera when the next stop is close. */b.v=new THREE.Vector3(dx,-.55,-dy).normalize().multiplyScalar(50);b.onclick=e=>{e.stopPropagation();go(i)};host.appendChild(b)})}
-function projectHotspots(){camera.updateMatrixWorld();const w=innerWidth,h=innerHeight;$$('.hotspot').forEach(b=>{const v=b.v.clone().applyAxisAngle(new THREE.Vector3(0,1,0),state.data.yawOffset||0).project(camera);const hidden=v.z>1||Math.abs(v.x)>1.15||Math.abs(v.y)>1.15;b.style.display=hidden?'none':'block';b.style.left=(v.x*.5+.5)*w+'px';b.style.top=(-v.y*.5+.5)*h+'px'})}
-function updateUI(){const r=rooms.find(x=>x.id===state.room);$('#roomName').textContent=r.name;$('#pointName').textContent=`Viewpoint ${state.idx+1} of ${state.data.points.length}`;$$('.room').forEach(b=>b.classList.toggle('current',b.dataset.room===state.room));location.hash=`${state.room}/${state.idx+1}`;renderRefs(r)}
-function renderRefs(r){$('#refs').innerHTML=r.shots.map((file,i)=>`<button class="ref" data-file="${file}" aria-label="Open design view ${i+1}"><img loading="lazy" src="assets/renders/${file}" alt="${r.name} design view ${i+1}"></button>`).join('');$$('.ref').forEach(b=>b.onclick=()=>{$('#lightbox img').src='assets/renders/'+b.dataset.file;$('#lightbox').classList.add('open')})}
-async function go(i,instant=false){if(state.moving)return;state.moving=true;const t=await texture(state.room,i);if(!instant)$('#veil').classList.add('on');setTimeout(()=>{state.idx=i;state.yaw=state.data.points[i].yaw||0;state.pitch=0;sphere.material.dispose();sphere.material=new THREE.MeshBasicMaterial({map:t,side:THREE.DoubleSide});sphere.rotation.y=(state.data.yawOffset||0)-Math.PI/2;buildHotspots();updateUI();$('#load').classList.add('hide');requestAnimationFrame(()=>$('#veil').classList.remove('on'));state.moving=false;nearest().slice(0,2).forEach(x=>texture(state.room,x.i).catch(()=>{}))},instant?0:210)}
-function enterRoom(id,i=0){state.room=id;state.data=T[id];go(Math.min(i,state.data.points.length-1),!sphere.material.map)}
-function reset(){state.yaw=state.data.points[state.idx].yaw||0;state.pitch=0;camera.fov=72;camera.updateProjectionMatrix()}
+  const stops=$('#stops');
+  labels.forEach((label,i)=>{const b=document.createElement('button');b.className='stop';b.textContent=label;b.onclick=()=>go(i);b.setAttribute('aria-label','Move to '+label);stops.appendChild(b)});
 
-$('#prevBtn').onclick=()=>go((state.idx-1+state.data.points.length)%state.data.points.length);$('#nextBtn').onclick=()=>go((state.idx+1)%state.data.points.length);$('#resetBtn').onclick=reset;$('#rotateBtn').onclick=()=>{state.auto=!state.auto;$('#rotateBtn').classList.toggle('on',state.auto);state.lastInput=Date.now()};
-$('#fullBtn').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
-$('#lightbox button').onclick=()=>$('#lightbox').classList.remove('open');
-function input(){state.lastInput=Date.now()}$('#pano').onmousedown=e=>{state.drag=true;state.x=e.clientX;state.y=e.clientY;input()};addEventListener('mouseup',()=>state.drag=false);addEventListener('mousemove',e=>{if(!state.drag)return;state.yaw+=(e.clientX-state.x)*.0027;state.pitch=Math.max(-1.42,Math.min(1.42,state.pitch+(e.clientY-state.y)*.0027));state.x=e.clientX;state.y=e.clientY;input()});
-$('#pano').addEventListener('wheel',e=>{e.preventDefault();camera.fov=Math.max(34,Math.min(92,camera.fov+Math.sign(e.deltaY)*3));camera.updateProjectionMatrix();input()},{passive:false});
-let touch=null;$('#pano').addEventListener('touchstart',e=>{const t=e.touches[0];touch={x:t.clientX,y:t.clientY};input()},{passive:true});$('#pano').addEventListener('touchmove',e=>{if(!touch)return;const t=e.touches[0];state.yaw+=(t.clientX-touch.x)*.005;state.pitch=Math.max(-1.42,Math.min(1.42,state.pitch+(t.clientY-touch.y)*.005));touch={x:t.clientX,y:t.clientY};input()},{passive:true});addEventListener('touchend',()=>touch=null);
-addEventListener('keydown',e=>{if(e.key==='Escape'){closePanels();$('#lightbox').classList.remove('open')}if(e.key==='ArrowLeft')state.yaw-=.12;if(e.key==='ArrowRight')state.yaw+=.12;const n=parseInt(e.key,10);if(n>=1&&n<=state.data.points.length)go(n-1);input()});
-function loop(){requestAnimationFrame(loop);if(state.auto&&Date.now()-state.lastInput>2200&&!state.drag)state.yaw+=.00055;camera.rotation.set(state.pitch,state.yaw,0,'YXZ');projectHotspots();renderer.render(scene,camera)}
-const hash=location.hash.slice(1).split('/'),startRoom=T[hash[0]]?hash[0]:'master',startPoint=Math.max(0,(parseInt(hash[1],10)||1)-1);enterRoom(startRoom,startPoint);loop();
+  function updateUI(){
+    [...stops.children].forEach((b,i)=>{b.classList.toggle('active',i===current);b.setAttribute('aria-current',i===current?'location':'false')});
+    $('#scene-name').textContent=labels[current];
+    const next=(current+1)%data.points.length;
+    $('#move-label').textContent='Move to '+labels[next].toLowerCase();
+    drawPlan();
+  }
+
+  function loadTexture(i){
+    if(textures[i])return Promise.resolve(textures[i]);
+    return new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/tour/'+data.points[i].file,t=>{t.mapping=THREE.UVMapping;t.encoding=THREE.sRGBEncoding;t.minFilter=THREE.LinearFilter;textures[i]=t;resolve(t)},undefined,reject));
+  }
+
+  async function go(i,initial=false){
+    if(moving||i===current&&!initial)return;
+    moving=true;
+    if(!initial){$('#intro').classList.remove('show');veil.classList.add('move')}
+    try{
+      const t=await loadTexture(i);
+      if(!initial)await new Promise(r=>setTimeout(r,280));
+      sphere.material.map=t;sphere.material.color.setHex(0xffffff);sphere.material.needsUpdate=true;
+      current=i;yaw=arrivalYaw[i]||0;pitch=arrivalPitch[i]??-.035;fov=arrivalFov[i]||68;camera.fov=fov;camera.updateProjectionMatrix();updateUI();
+      if(!initial)requestAnimationFrame(()=>veil.classList.remove('move'));
+    }catch(e){loading.textContent='This viewpoint could not be loaded';loading.style.opacity=1}
+    moving=false;
+  }
+
+  async function start(){
+    try{
+      await go(0,true);
+      loading.style.opacity=0;veil.classList.add('ready');$('#intro').classList.add('show');
+      setTimeout(()=>$('#intro').classList.remove('show'),4200);
+      data.points.forEach((_,i)=>{if(i)loadTexture(i)});
+    }catch(e){loading.textContent='Bedroom 2 could not be opened'}
+  }
+
+  canvas.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);$('#intro').classList.remove('show')});
+  canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('pointercancel',()=>drag=false);
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-lx)*.003;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-ly)*.003,-1.15,1.15);lx=e.clientX;ly=e.clientY});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();fov=THREE.MathUtils.clamp(fov+Math.sign(e.deltaY)*3,42,82);camera.fov=fov;camera.updateProjectionMatrix()},{passive:false});
+  $('#move').onclick=()=>go((current+1)%data.points.length);
+
+  const plan=$('#plan-panel'),planBtn=$('#plan-btn'),mini=$('#mini');
+  planBtn.onclick=()=>{const open=!plan.classList.contains('open');plan.classList.toggle('open',open);planBtn.setAttribute('aria-expanded',open);plan.setAttribute('aria-hidden',!open)};
+  function planPoints(){
+    const xs=data.points.map(p=>p.x),ys=data.points.map(p=>p.y),pad=.8;
+    return {minX:Math.min(...xs)-pad,maxX:Math.max(...xs)+pad,minY:Math.min(...ys)-pad,maxY:Math.max(...ys)+pad};
+  }
+  function pointToCanvas(p){const b=planPoints(),pad=34,w=mini.width-pad*2,h=mini.height-pad*2;return [pad+(p.x-b.minX)/(b.maxX-b.minX)*w,pad+(p.y-b.minY)/(b.maxY-b.minY)*h]}
+  function drawPlan(){
+    const g=mini.getContext('2d'),W=mini.width,H=mini.height;g.clearRect(0,0,W,H);g.fillStyle='#1d1915';g.fillRect(0,0,W,H);
+    g.strokeStyle='rgba(245,240,231,.33)';g.lineWidth=2;g.strokeRect(24,24,W-48,H-48);
+    const pts=data.points.map(pointToCanvas);if(pts.length>1){g.beginPath();g.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)g.lineTo(...pts[i]);g.setLineDash([8,10]);g.strokeStyle='rgba(203,187,165,.5)';g.stroke();g.setLineDash([])}
+    pts.forEach(([x,y],i)=>{g.beginPath();g.arc(x,y,i===current?15:11,0,Math.PI*2);g.fillStyle=i===current?'#f5f0e7':'#a9824e';g.fill();g.lineWidth=3;g.strokeStyle='#1d1915';g.stroke();g.fillStyle=i===current?'#17130f':'#fff';g.font='600 15px Avenir Next, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(String(i+1),x,y+.5)});
+    g.fillStyle='rgba(245,240,231,.67)';g.font='600 13px Avenir Next, sans-serif';g.textAlign='left';g.textBaseline='alphabetic';g.fillText('WINDOW',36,48);g.fillText('BED',W-72,H-34);
+  }
+  mini.onclick=e=>{const r=mini.getBoundingClientRect(),mx=(e.clientX-r.left)*mini.width/r.width,my=(e.clientY-r.top)*mini.height/r.height;let best=-1,dist=Infinity;data.points.forEach((p,i)=>{const [x,y]=pointToCanvas(p),d=Math.hypot(mx-x,my-y);if(d<dist){dist=d;best=i}});if(best>=0&&dist<34){go(best);plan.classList.remove('open');planBtn.setAttribute('aria-expanded','false');plan.setAttribute('aria-hidden','true')}};
+  addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){go((current+1)%data.points.length)}if(e.key==='1')go(0);if(e.key==='2'&&data.points[1])go(1);if(e.key==='Escape'){plan.classList.remove('open');planBtn.setAttribute('aria-expanded','false')}});
+  drawPlan();start();
+})();
 </script>
 </body>
 </html>
