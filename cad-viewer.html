@@ -5,7 +5,7 @@
 @media(max-width:750px){header{height:64px;padding:10px 15px}header .badge{max-width:140px}main{height:calc(100dvh - 64px);grid-template-columns:170px 1fr}aside{padding:14px 10px}h1{font-size:24px}.rooms{gap:5px;margin:12px 0}button{font-size:12px;padding:9px}aside p{font-size:11px}.meta{margin-top:15px}#status{left:8px;right:8px;bottom:8px;font-size:11px}#motion{right:8px}h2{font-size:18px}}
 .embed body{overflow:hidden;background:#edf1f3}.embed header,.embed aside{display:none}.embed main{display:block;height:100dvh}.embed #viewport{width:100%;height:100dvh}.embed #status{left:18px;right:auto;bottom:18px;max-width:520px;background:rgba(248,250,251,.88);backdrop-filter:blur(10px)}.embed #motion{bottom:78px}.embed #plan{display:none!important}
 </style><header><div><small>Studio Spindle / spatial review</small><h1>B-34, Dwarka</h1></div><span class="badge">Working draft · appearance unapproved</span></header><main><aside><h2>Explore the apartment</h2><p>The CAD shell and original room models, together at their original scale.</p><div class="row"><button id="overview" class="active">3D</button><button id="top">Top</button><button id="planBtn">Plan</button></div><button id="walk" style="width:100%">Walk shell from entrance</button><div class="rooms" id="rooms"></div><button id="models" style="width:100%">Show bedroom models</button><button id="photo" style="width:100%;margin-top:7px;display:none">Step into the photoreal 360</button><div id="load" role="status" aria-live="polite">Loading the shell…</div><div class="meta"><h2>Review evidence</h2><p><a href="assets/cad-draft/registration-and-paths.png" target="_blank">Model alignment and routes ↗</a></p><p><a href="assets/cad-draft/flat-cad.blend">Editable Blender shell</a></p><p><a href="index.html" target="_blank">Existing room experience ↗</a></p><p>Wall heights and window sills are provisional. This review checks space and placement, not final materials.</p></div></aside><div id="viewport"><div id="plan"><img src="assets/floorplan.png" alt="Architect's B-34 ALD-01 floor layout"></div><div id="motion"><span></span><button data-key="w" aria-label="Move forward">↑</button><span></span><button data-key="a" aria-label="Move left">←</button><button data-key="s" aria-label="Move backward">↓</button><button data-key="d" aria-label="Move right">→</button></div><div id="status" role="status">Drag to orbit · scroll to zoom</div></div></main>
-<script src="assets/lib/three.min.js"></script><script src="assets/lib/GLTFLoader.js"></script><script src="assets/lib/DRACOLoader.js"></script><script src="assets/lib/pp/CopyShader.js"></script><script src="assets/lib/pp/SAOShader.js"></script><script src="assets/lib/pp/DepthLimitedBlurShader.js"></script><script src="assets/lib/pp/UnpackDepthRGBAShader.js"></script><script src="assets/lib/pp/EffectComposer.js"></script><script src="assets/lib/pp/RenderPass.js"></script><script src="assets/lib/pp/ShaderPass.js"></script><script src="assets/lib/pp/MaskPass.js"></script><script src="assets/lib/pp/SAOPass.js"></script><script src="rooms-materials.js"></script><script src="rooms-nav.js"></script><script src="rooms-tour.js"></script><script>
+<script src="assets/lib/three.min.js"></script><script src="assets/lib/GLTFLoader.js"></script><script src="assets/lib/DRACOLoader.js"></script><script src="assets/lib/pp/CopyShader.js"></script><script src="assets/lib/pp/SAOShader.js"></script><script src="assets/lib/pp/DepthLimitedBlurShader.js"></script><script src="assets/lib/pp/UnpackDepthRGBAShader.js"></script><script src="assets/lib/pp/EffectComposer.js"></script><script src="assets/lib/pp/RenderPass.js"></script><script src="assets/lib/pp/ShaderPass.js"></script><script src="assets/lib/pp/MaskPass.js"></script><script src="assets/lib/pp/LuminosityHighPassShader.js"></script><script src="assets/lib/pp/SAOPass.js"></script><script src="assets/lib/pp/UnrealBloomPass.js"></script><script src="rooms-materials.js"></script><script src="rooms-nav.js"></script><script src="rooms-tour.js"></script><script>
 (async()=>{'use strict';const EMBED=document.documentElement.classList.contains('embed'),$=x=>document.getElementById(x),V=$('viewport'),S=$('status'),keys={},loaded={};let mode='orbit',yaw=.62,pitch=.8,tYaw=.62,tPitch=.8,vx=0,vz=0,dist=26,target=new THREE.Vector3(9,0,-7.3),data,nav,flat,modelsVisible=false,loading=false,activeRoom=null;
 const scene=new THREE.Scene();scene.background=new THREE.Color(EMBED?'#d7cec1':'#edf1f3');const camera=new THREE.PerspectiveCamera(48,1,.04,150);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=EMBED?.58:.76;renderer.localClippingEnabled=true;V.prepend(renderer.domElement);
 /* Glass and polished surfaces get their appearance from what they reflect and what
@@ -125,7 +125,7 @@ window.__b34={renderer,scene,camera,sun,fill};
    was photographed rather than assembled, and no light rig produces it. SAO
    approximates it from the depth buffer. Settings mirror the ones already
    tuned in index.html rather than being invented again here. */
-let composer=null,saoPass=null;
+let composer=null,saoPass=null,bloomPass=null,gradePass=null;
 function buildComposer(){
   if(typeof THREE.EffectComposer!=='function'||typeof THREE.SAOPass!=='function')return;
   /* SAO costs roughly a third of the frame rate on a desktop GPU. A phone does
@@ -145,11 +145,46 @@ function buildComposer(){
   saoPass.params.saoBlurRadius=8;saoPass.params.saoBlurStdDev=5;
   saoPass.params.saoBlurDepthCutoff=.008;
   composer.addPass(saoPass);
+
+  /* Everything above this line is about being correct. This is about looking
+     expensive, which is a different problem and the one that was actually
+     making it read as cheap. A flat, ungraded, milky grey image looks like a
+     viewport. The polished tours we keep comparing against are not more
+     physically accurate than this - they are graded. Bloom on the bright
+     surfaces, a real contrast curve, warm highlights against cooler shadows,
+     and a vignette to stop the frame going flat at the edges. */
+  if(typeof THREE.UnrealBloomPass==='function'){
+    bloomPass=new THREE.UnrealBloomPass(
+      new THREE.Vector2(V.clientWidth,V.clientHeight),0.34,0.82,0.95);
+    composer.addPass(bloomPass);
+  }
+  gradePass=new THREE.ShaderPass({
+    uniforms:{tDiffuse:{value:null},contrast:{value:1.14},saturation:{value:1.06},
+              lift:{value:new THREE.Color(0.012,0.014,0.020)},
+              gain:{value:new THREE.Color(1.035,1.012,0.982)},
+              vignette:{value:0.30}},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:[
+      'uniform sampler2D tDiffuse;uniform float contrast,saturation,vignette;',
+      'uniform vec3 lift,gain;varying vec2 vUv;',
+      'void main(){',
+      ' vec4 t=texture2D(tDiffuse,vUv);vec3 c=t.rgb;',
+      ' c=c*gain+lift;',
+      ' c=(c-0.5)*contrast+0.5;',
+      ' float l=dot(c,vec3(0.2126,0.7152,0.0722));',
+      ' c=mix(vec3(l),c,saturation);',
+      ' vec2 d=vUv-0.5;',
+      ' c*=1.0-vignette*dot(d,d);',
+      ' gl_FragColor=vec4(clamp(c,0.0,1.0),t.a);',
+      '}'].join('\n')
+  });
+  gradePass.renderToScreen=true;
+  composer.addPass(gradePass);
   composer.setSize(V.clientWidth,V.clientHeight);
   /* The extra passes are resolution-bound, so buy some of that cost back by
      rendering slightly below the display's own ratio. The occlusion is worth
      more than the last quarter of a pixel. */
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 }
 /* If it still cannot keep up on whatever machine this actually runs on, drop
    the effect rather than serving the client a slideshow. Measured over a
@@ -159,13 +194,18 @@ function watchFrame(dt){
   if(!composer||saoDropped)return;
   fpsWin.push(dt);if(fpsWin.length<90)return;
   const avg=fpsWin.reduce((a,b)=>a+b,0)/fpsWin.length;fpsWin=[];
-  if(avg>1/22){saoDropped=true;composer=null;renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
-    console.info('B-34: ambient occlusion disabled, frame time '+(avg*1000).toFixed(0)+'ms');}
+  /* Drop the expensive pass, keep the cheap ones. Occlusion is most of the cost;
+     the grade is nearly free and is what stops the image looking like a
+     viewport, so it is the last thing to go. */
+  if(avg>1/22){saoDropped=true;
+    if(saoPass&&composer){composer.passes=composer.passes.filter(p=>p!==saoPass);
+      console.info('B-34: ambient occlusion disabled, frame time '+(avg*1000).toFixed(0)+'ms');}
+    else{composer=null;renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));}}
 }
 try{buildComposer()}catch(e){console.warn('post-processing unavailable',e);composer=null}
 const draco=new THREE.DRACOLoader();draco.setDecoderPath('assets/lib/draco/');const loader=new THREE.GLTFLoader();loader.setDRACOLoader(draco);const cut=new THREE.Plane(new THREE.Vector3(0,-1,0),1.35);let shell;
 function loadGLB(url){return new Promise((ok,no)=>loader.load(url,g=>ok(g.scene),undefined,no))}
-function fit(){const w=V.clientWidth,h=V.clientHeight;renderer.setSize(w,h);if(composer)composer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();panoCam.aspect=w/h;panoCam.updateProjectionMatrix();if(mode!=='walk'){dist=Math.max(24,20/camera.aspect);orbit()}}
+function fit(){const w=V.clientWidth,h=V.clientHeight;renderer.setSize(w,h);if(composer){composer.setSize(w,h);if(bloomPass)bloomPass.setSize(w,h);}camera.aspect=w/h;camera.updateProjectionMatrix();panoCam.aspect=w/h;panoCam.updateProjectionMatrix();if(mode!=='walk'){dist=Math.max(24,20/camera.aspect);orbit()}}
 function orbit(){camera.position.set(target.x+dist*Math.sin(yaw)*Math.cos(pitch),target.y+dist*Math.sin(pitch),target.z+dist*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(target)}
 function setMode(m){mode=m;camera.fov=m==='walk'?72:48;camera.updateProjectionMatrix();if(window.__b34SetLabelsVisible)window.__b34SetLabelsVisible(m!=='walk'&&!activeRoom);$('plan').style.display=m==='plan'?'block':'none';$('motion').style.display=m==='walk'?'grid':'none';for(const id of ['overview','top','planBtn','walk'])$(id).classList.toggle('active',id===({orbit:'overview',top:'top',plan:'planBtn',walk:'walk'}[m]));renderer.clippingPlanes=m==='top'?[cut]:[];S.textContent=m==='walk'?'Drag to look · WASD / arrows to move · Esc returns to overview.':EMBED?'Drag to orbit · scroll to zoom · select a room from the list.':'Drag to orbit · scroll to zoom. Bedroom overlay preserves source geometry.'}
 /* The clip exists to stop exported geometry projecting into circulation. A balcony
