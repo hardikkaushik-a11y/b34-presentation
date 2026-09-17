@@ -5,8 +5,8 @@
 @media(max-width:750px){header{height:64px;padding:10px 15px}header .badge{max-width:140px}main{height:calc(100dvh - 64px);grid-template-columns:170px 1fr}aside{padding:14px 10px}h1{font-size:24px}.rooms{gap:5px;margin:12px 0}button{font-size:12px;padding:9px}aside p{font-size:11px}.meta{margin-top:15px}#status{left:8px;right:8px;bottom:8px;font-size:11px}#motion{right:8px}h2{font-size:18px}}
 .embed body{overflow:hidden;background:#edf1f3}.embed header,.embed aside{display:none}.embed main{display:block;height:100dvh}.embed #viewport{width:100%;height:100dvh}.embed #status{left:18px;right:auto;bottom:18px;max-width:520px;background:rgba(248,250,251,.88);backdrop-filter:blur(10px)}.embed #motion{bottom:78px}.embed #plan{display:none!important}
 </style><header><div><small>Studio Spindle / spatial review</small><h1>B-34, Dwarka</h1></div><span class="badge">Working draft · appearance unapproved</span></header><main><aside><h2>Explore the apartment</h2><p>The CAD shell and original room models, together at their original scale.</p><div class="row"><button id="overview" class="active">3D</button><button id="top">Top</button><button id="planBtn">Plan</button></div><button id="walk" style="width:100%">Walk shell from entrance</button><div class="rooms" id="rooms"></div><button id="models" style="width:100%">Show bedroom models</button><button id="photo" style="width:100%;margin-top:7px;display:none">Step into the photoreal 360</button><div id="load" role="status" aria-live="polite">Loading the shell…</div><div class="meta"><h2>Review evidence</h2><p><a href="assets/cad-draft/registration-and-paths.png" target="_blank">Model alignment and routes ↗</a></p><p><a href="assets/cad-draft/flat-cad.blend">Editable Blender shell</a></p><p><a href="index.html" target="_blank">Existing room experience ↗</a></p><p>Wall heights and window sills are provisional. This review checks space and placement, not final materials.</p></div></aside><div id="viewport"><div id="plan"><img src="assets/floorplan.png" alt="Architect's B-34 ALD-01 floor layout"></div><div id="motion"><span></span><button data-key="w" aria-label="Move forward">↑</button><span></span><button data-key="a" aria-label="Move left">←</button><button data-key="s" aria-label="Move backward">↓</button><button data-key="d" aria-label="Move right">→</button></div><div id="status" role="status">Drag to orbit · scroll to zoom</div></div></main>
-<script src="assets/lib/three.min.js"></script><script src="assets/lib/GLTFLoader.js"></script><script src="assets/lib/DRACOLoader.js"></script><script src="rooms-materials.js"></script><script src="rooms-nav.js"></script><script src="rooms-tour.js"></script><script>
-(async()=>{'use strict';const EMBED=document.documentElement.classList.contains('embed'),$=x=>document.getElementById(x),V=$('viewport'),S=$('status'),keys={},loaded={};let mode='orbit',yaw=.62,pitch=.8,dist=26,target=new THREE.Vector3(9,0,-7.3),data,nav,flat,modelsVisible=false,loading=false,activeRoom=null;
+<script src="assets/lib/three.min.js"></script><script src="assets/lib/GLTFLoader.js"></script><script src="assets/lib/DRACOLoader.js"></script><script src="assets/lib/pp/CopyShader.js"></script><script src="assets/lib/pp/SAOShader.js"></script><script src="assets/lib/pp/DepthLimitedBlurShader.js"></script><script src="assets/lib/pp/UnpackDepthRGBAShader.js"></script><script src="assets/lib/pp/EffectComposer.js"></script><script src="assets/lib/pp/RenderPass.js"></script><script src="assets/lib/pp/ShaderPass.js"></script><script src="assets/lib/pp/MaskPass.js"></script><script src="assets/lib/pp/SAOPass.js"></script><script src="rooms-materials.js"></script><script src="rooms-nav.js"></script><script src="rooms-tour.js"></script><script>
+(async()=>{'use strict';const EMBED=document.documentElement.classList.contains('embed'),$=x=>document.getElementById(x),V=$('viewport'),S=$('status'),keys={},loaded={};let mode='orbit',yaw=.62,pitch=.8,tYaw=.62,tPitch=.8,vx=0,vz=0,dist=26,target=new THREE.Vector3(9,0,-7.3),data,nav,flat,modelsVisible=false,loading=false,activeRoom=null;
 const scene=new THREE.Scene();scene.background=new THREE.Color(EMBED?'#d7cec1':'#edf1f3');const camera=new THREE.PerspectiveCamera(48,1,.04,150);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=EMBED?.58:.76;renderer.localClippingEnabled=true;V.prepend(renderer.domElement);
 /* Glass and polished surfaces get their appearance from what they reflect and what
    is behind them. With no environment, three.js has nothing to give them, so every
@@ -92,10 +92,80 @@ async function enterPhoto(i){
 }
 function exitPhoto(){photoMode=false;$('photo').textContent='Step into the photoreal 360';if(mode==='walk')$('motion').style.display='grid';S.textContent='Drag to look · WASD / arrows to walk within this room. Esc returns to overview.';$('load').textContent='Viewing '+names[activeRoom]+'. Walkable model.'}
 function togglePhoto(){photoMode?exitPhoto():enterPhoto(nearestStop(activeRoom))}
-scene.add(new THREE.HemisphereLight(0xd8e7ff,0xb8a88f,.75));const sun=new THREE.DirectionalLight(0xffe9d2,1.0);sun.position.set(-6,18,6);scene.add(sun);const fill=new THREE.DirectionalLight(0xffffff,.4);fill.position.set(15,10,-18);scene.add(fill);
+/* The room read as flat and washed out for two reasons, both fixable without
+   any new asset from the architect. Nothing cast a shadow - shadowMap was never
+   switched on - so every object floated on the floor instead of sitting on it.
+   And the rig was mostly ambient (hemisphere .75 against a key of 1.0), which
+   lights every face equally and erases the form of anything it touches. Less
+   ambient, a stronger key that actually casts, and a weak opposite fill so the
+   shadow side is readable rather than black. */
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+scene.add(new THREE.HemisphereLight(0xd8e7ff,0xb8a88f,.34));
+const sun=new THREE.DirectionalLight(0xffeedd,2.05);sun.position.set(-7,15,8);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=.5;sun.shadow.camera.far=60;
+sun.shadow.camera.left=-14;sun.shadow.camera.right=14;
+sun.shadow.camera.top=14;sun.shadow.camera.bottom=-14;
+/* Walls and slabs are thin prisms, so a flat bias rings them with acne. Normal
+   bias moves the sample along the surface normal instead and leaves thin
+   geometry alone. */
+sun.shadow.bias=-.0004;sun.shadow.normalBias=.028;
+scene.add(sun);scene.add(sun.target);
+const fill=new THREE.DirectionalLight(0xdce7f5,.26);fill.position.set(14,8,-16);scene.add(fill);
+/* A key light this strong needs somewhere for its shadow camera to point, or a
+   room at the far end of the flat falls outside the 28 m box above. */
+function aimSun(x,z){sun.target.position.set(x,0,z);sun.position.set(x-7,15,z+8);sun.target.updateMatrixWorld()}
+/* Handle for diagnosing the render from the console. Read-only in practice; the
+   viewer never reads it back. */
+window.__b34={renderer,scene,camera,sun,fill};
+
+/* Shadows say where the sun is blocked; they say nothing about the darkening
+   where a bedside table meets the floor or where a wall meets a ceiling. That
+   contact darkening is most of what makes a real-time interior look like it
+   was photographed rather than assembled, and no light rig produces it. SAO
+   approximates it from the depth buffer. Settings mirror the ones already
+   tuned in index.html rather than being invented again here. */
+let composer=null,saoPass=null;
+function buildComposer(){
+  if(typeof THREE.EffectComposer!=='function'||typeof THREE.SAOPass!=='function')return;
+  /* SAO costs roughly a third of the frame rate on a desktop GPU. A phone does
+     not have that to give, so it does without rather than crawling. */
+  if(Math.min(innerWidth,innerHeight)<700)return;
+  composer=new THREE.EffectComposer(renderer);
+  /* r128 composer targets are linear by default, which silently drops the
+     renderer's tone mapping and sRGB output and leaves everything dark. */
+  composer.renderTarget1.texture.encoding=THREE.sRGBEncoding;
+  composer.renderTarget2.texture.encoding=THREE.sRGBEncoding;
+  composer.addPass(new THREE.RenderPass(scene,camera));
+  saoPass=new THREE.SAOPass(scene,camera,false,true);
+  saoPass.params.output=THREE.SAOPass.OUTPUT.Default;
+  saoPass.params.saoBias=.35;saoPass.params.saoIntensity=.028;
+  saoPass.params.saoScale=6.0;saoPass.params.saoKernelRadius=42;
+  saoPass.params.saoMinResolution=0;saoPass.params.saoBlur=true;
+  saoPass.params.saoBlurRadius=8;saoPass.params.saoBlurStdDev=5;
+  saoPass.params.saoBlurDepthCutoff=.008;
+  composer.addPass(saoPass);
+  composer.setSize(V.clientWidth,V.clientHeight);
+  /* The extra passes are resolution-bound, so buy some of that cost back by
+     rendering slightly below the display's own ratio. The occlusion is worth
+     more than the last quarter of a pixel. */
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
+}
+/* If it still cannot keep up on whatever machine this actually runs on, drop
+   the effect rather than serving the client a slideshow. Measured over a
+   window of frames so one slow frame during a model load does not trip it. */
+let fpsWin=[],saoDropped=false;
+function watchFrame(dt){
+  if(!composer||saoDropped)return;
+  fpsWin.push(dt);if(fpsWin.length<90)return;
+  const avg=fpsWin.reduce((a,b)=>a+b,0)/fpsWin.length;fpsWin=[];
+  if(avg>1/22){saoDropped=true;composer=null;renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    console.info('B-34: ambient occlusion disabled, frame time '+(avg*1000).toFixed(0)+'ms');}
+}
+try{buildComposer()}catch(e){console.warn('post-processing unavailable',e);composer=null}
 const draco=new THREE.DRACOLoader();draco.setDecoderPath('assets/lib/draco/');const loader=new THREE.GLTFLoader();loader.setDRACOLoader(draco);const cut=new THREE.Plane(new THREE.Vector3(0,-1,0),1.35);let shell;
 function loadGLB(url){return new Promise((ok,no)=>loader.load(url,g=>ok(g.scene),undefined,no))}
-function fit(){const w=V.clientWidth,h=V.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();panoCam.aspect=w/h;panoCam.updateProjectionMatrix();if(mode!=='walk'){dist=Math.max(24,20/camera.aspect);orbit()}}
+function fit(){const w=V.clientWidth,h=V.clientHeight;renderer.setSize(w,h);if(composer)composer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();panoCam.aspect=w/h;panoCam.updateProjectionMatrix();if(mode!=='walk'){dist=Math.max(24,20/camera.aspect);orbit()}}
 function orbit(){camera.position.set(target.x+dist*Math.sin(yaw)*Math.cos(pitch),target.y+dist*Math.sin(pitch),target.z+dist*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(target)}
 function setMode(m){mode=m;camera.fov=m==='walk'?72:48;camera.updateProjectionMatrix();if(window.__b34SetLabelsVisible)window.__b34SetLabelsVisible(m!=='walk'&&!activeRoom);$('plan').style.display=m==='plan'?'block':'none';$('motion').style.display=m==='walk'?'grid':'none';for(const id of ['overview','top','planBtn','walk'])$(id).classList.toggle('active',id===({orbit:'overview',top:'top',plan:'planBtn',walk:'walk'}[m]));renderer.clippingPlanes=m==='top'?[cut]:[];S.textContent=m==='walk'?'Drag to look · WASD / arrows to move · Esc returns to overview.':EMBED?'Drag to orbit · scroll to zoom · select a room from the list.':'Drag to orbit · scroll to zoom. Bedroom overlay preserves source geometry.'}
 /* The clip exists to stop exported geometry projecting into circulation. A balcony
@@ -105,14 +175,14 @@ function setMode(m){mode=m;camera.fov=m==='walk'?72:48;camera.updateProjectionMa
    legitimately continues past its boundary. */
 const CLIP_EXTEND={bed3:{y1:1.45}};
 function overlayClip(root,rid,on){const ex=CLIP_EXTEND[rid]||{},p=data.rooms[rid].boundary_xy,x=p.map(v=>v[0]),y=p.map(v=>v[1]),planes=on?[new THREE.Plane(new THREE.Vector3(1,0,0),-Math.min(...x)),new THREE.Plane(new THREE.Vector3(-1,0,0),Math.max(...x)),new THREE.Plane(new THREE.Vector3(0,0,-1),-Math.min(...y)),new THREE.Plane(new THREE.Vector3(0,0,1),Math.max(...y)+(ex.y1||0))]:null;root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){m.clippingPlanes=planes;m.clipIntersection=false;m.needsUpdate=true}})}
-function home(top=false){photoMode=false;$('photo').style.display='none';$('photo').textContent='Step into the photoreal 360';if(SKY_ENV)scene.environment=SKY_ENV;activeRoom=null;if(shell)shell.visible=true;Object.entries(loaded).forEach(([rid,r])=>{r.visible=modelsVisible;overlayClip(r,rid,true)});$('models').textContent=modelsVisible?'Hide bedroom models':'Show bedroom models';setMode(top?'top':'orbit');target.set(9,0,-7.3);yaw=top?0:.62;pitch=top?Math.PI/2-.001:.8;fit()}
+function home(top=false){photoMode=false;$('photo').style.display='none';$('photo').textContent='Step into the photoreal 360';if(SKY_ENV)scene.environment=SKY_ENV;activeRoom=null;if(shell)shell.visible=true;Object.entries(loaded).forEach(([rid,r])=>{r.visible=modelsVisible;overlayClip(r,rid,true)});$('models').textContent=modelsVisible?'Hide bedroom models':'Show bedroom models';setMode(top?'top':'orbit');aimSun(9,-7.3);target.set(9,0,-7.3);yaw=top?0:.62;pitch=top?Math.PI/2-.001:.8;fit()}
 function canWalk(x,z){if(activeRoom){const n=window.ROOMNAV[activeRoom],t=data.transforms[activeRoom].translation_xyz,lx=x-t[0],ly=-(z-t[2]);for(const [dx,dy] of [[0,0],[.12,0],[-.12,0],[0,.12],[0,-.12]]){const a=Math.floor((lx+dx-n.min[0])/n.cell),b=Math.floor((ly+dy-n.min[1])/n.cell);if(a<0||b<0||a>=n.w||b>=n.h||n.grid[b*n.w+a]!=='0')return false;}return true;}const gx=Math.floor(x/nav.cell_m),gy=Math.floor(-z/nav.cell_m);return gx>=0&&gy>=0&&gx<nav.width&&gy<nav.height&&nav.grid[gy][gx]==='0'}
-function startWalk(){$('load').textContent='Walking the neutral CAD shell. Bedroom buttons open furnished rooms.';activeRoom=null;modelsVisible=false;if(shell)shell.visible=true;Object.values(loaded).forEach(r=>r.visible=false);$('models').textContent='Show bedroom models';setMode('walk');const route=nav.results.dining.route_xy,a=route[0],b=route[Math.min(20,route.length-1)];camera.position.set(a[0],1.6,-a[1]);yaw=Math.atan2(-(b[0]-a[0]),b[1]-a[1]);pitch=0;look()}
+function startWalk(){$('load').textContent='Walking the neutral CAD shell. Bedroom buttons open furnished rooms.';activeRoom=null;modelsVisible=false;if(shell)shell.visible=true;Object.values(loaded).forEach(r=>r.visible=false);$('models').textContent='Show bedroom models';setMode('walk');const route=nav.results.dining.route_xy,a=route[0],b=route[Math.min(20,route.length-1)];camera.position.set(a[0],1.6,-a[1]);yaw=tYaw=Math.atan2(-(b[0]-a[0]),b[1]-a[1]);pitch=tPitch=0;vx=vz=0;look()}
 function look(){camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0)}
-function palette(root,rid){root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){const exact=window.ROOMMAT?.rooms?.[rid]?.[m.name];/* her own V-Ray values fill what the hand-tuned palette never covered, but never over a real texture */const vray=!exact&&!m.map&&window.ROOMMAT?.vray?.[rid]?.[m.name];const e=exact||vray||(!m.map&&window.ROOMMAT?.common?.find(e=>m.name.toLowerCase().includes(e.match)));if(e){if(exact)m.map=null;m.color.setHex(e.color);if(e.rough!==undefined)m.roughness=e.rough;if(e.metal)m.metalness=1;/* glazing: r128 MeshStandard has no transmission, so approximate with alpha. Without this a window is an opaque slab. */if(e.opacity!==undefined){m.transparent=true;m.opacity=e.opacity;m.depthWrite=false;}}/* a smoother surface should take more from the environment, which is what makes glazing read as bright rather than as a hole */if(m.isMeshStandardMaterial){m.envMapIntensity=m.roughness<.3?1.5:.85;m.needsUpdate=true}m.side=THREE.DoubleSide;m.needsUpdate=true}})}
-async function room(rid){if(loaded[rid])return loaded[rid];const t=data.transforms[rid];const root=await loadGLB('assets/rooms/'+rid+'.glb');palette(root,rid);root.position.fromArray(t.translation_xyz);root.rotation.fromArray(t.rotation_xyz);root.visible=modelsVisible;scene.add(root);loaded[rid]=root;return root}
+function palette(root,rid){root.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){const exact=window.ROOMMAT?.rooms?.[rid]?.[m.name];/* her own V-Ray values fill what the hand-tuned palette never covered, but never over a real texture */const vray=!exact&&!m.map&&window.ROOMMAT?.vray?.[rid]?.[m.name];const e=exact||vray||(!m.map&&window.ROOMMAT?.common?.find(e=>m.name.toLowerCase().includes(e.match)));if(e){if(exact)m.map=null;m.color.setHex(e.color);if(e.rough!==undefined)m.roughness=e.rough;if(e.metal)m.metalness=1;/* glazing: r128 MeshStandard has no transmission, so approximate with alpha. Without this a window is an opaque slab. */if(e.opacity!==undefined){m.transparent=true;m.opacity=e.opacity;m.depthWrite=false;}}/* A smooth surface should take more from the environment - that is what makes glazing read as bright rather than as a hole. A matte one should take much less: at .85 the environment lit every face of every object almost equally, which filled the sun's shadows straight back in and left the room flat. Keep the glazing value, drop the diffuse one so the key light defines form. */if(m.isMeshStandardMaterial){m.envMapIntensity=m.roughness<.3?1.5:.34;m.needsUpdate=true}m.side=THREE.DoubleSide;m.needsUpdate=true}})}
+async function room(rid){if(loaded[rid])return loaded[rid];const t=data.transforms[rid];const root=await loadGLB('assets/rooms/'+rid+'.glb');palette(root,rid);root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});root.position.fromArray(t.translation_xyz);root.rotation.fromArray(t.rotation_xyz);root.visible=modelsVisible;scene.add(root);loaded[rid]=root;return root}
 async function toggleModels(){if(loading)return;if(activeRoom){home();$('load').textContent='Returned to the apartment overview.';return}modelsVisible=!modelsVisible;$('models').textContent=modelsVisible?'Hide bedroom models':'Show bedroom models';Object.entries(loaded).forEach(([rid,r])=>{r.visible=modelsVisible;overlayClip(r,rid,true)});if(!modelsVisible)return;loading=true;$('models').disabled=true;try{/* await inside the loop downloaded 35 MB of rooms one after another, about 46 s. They are independent, so fetch them together and let the slowest one set the pace. */const ids=Object.keys(data.transforms);let done=0;$('load').textContent='Loading 4 rooms…';await Promise.all(ids.map(rid=>room(rid).then(root=>{overlayClip(root,rid,true);$('load').textContent='Loaded '+(++done)+' of '+ids.length+'…'})));$('load').textContent='4 original bedroom models loaded. Materials remain an approximation.'}catch(e){$('load').textContent='Model loading failed: '+e.message;console.error(e)}finally{loading=false;$('models').disabled=false}}
-async function visit(rid,study=false){if(loading)return;modelsVisible=true;loading=true;$('models').disabled=true;$('load').textContent='Opening '+names[rid]+'…';try{const root=await room(rid);if(shell)shell.visible=false;Object.entries(loaded).forEach(([id,r])=>r.visible=id===rid);overlayClip(root,rid,false);root.visible=true;const t=data.transforms[rid].translation_xyz,n=window.ROOMNAV[rid];const views={master:{spawn:n.spawn,aim:[-2,-.85],pitch:-.20,fov:72},bed1:{spawn:n.spawn,aim:[-.6,-1.35],pitch:-.20,fov:72},bed2:{spawn:[-.9,1.3],aim:[1.28,-.35],pitch:-.12,fov:78},bed3:{spawn:n.spawn,aim:[.3,-.35],pitch:-.20,fov:72}};const v=study?{spawn:[2.152,.34],aim:[.7,-.65],pitch:-.20,fov:72}:views[rid];setMode('walk');camera.fov=v.fov;camera.updateProjectionMatrix();camera.position.set(t[0]+v.spawn[0],1.6,t[2]-v.spawn[1]);activeRoom=rid;yaw=Math.atan2(-(v.aim[0]-v.spawn[0]),v.aim[1]-v.spawn[1]);pitch=v.pitch;look();const stops=panoStops(rid);$('photo').style.display=stops.length?'block':'none';$('photo').textContent='Step into the photoreal 360';roomEnvironment(rid).then(env=>{if(activeRoom===rid&&env){scene.environment=env;Object.values(loaded).forEach(r=>r.traverse(o=>{if(o.isMesh)[].concat(o.material).forEach(m=>{m.envMapIntensity=m.roughness<.3?1.35:1.0;m.needsUpdate=true})}))}});S.textContent='Drag to look · WASD / arrows to walk within this room. Esc returns to overview.';$('models').textContent='Return to apartment';$('load').textContent='Viewing '+names[rid]+'. Source design, draft placement.'}catch(e){if(shell)shell.visible=true;$('load').textContent='Could not load room: '+e.message}finally{loading=false;$('models').disabled=false}}
+async function visit(rid,study=false){if(loading)return;modelsVisible=true;loading=true;$('models').disabled=true;$('load').textContent='Opening '+names[rid]+'…';try{const root=await room(rid);if(shell)shell.visible=false;Object.entries(loaded).forEach(([id,r])=>r.visible=id===rid);overlayClip(root,rid,false);root.visible=true;const t=data.transforms[rid].translation_xyz,n=window.ROOMNAV[rid];const views={master:{spawn:n.spawn,aim:[-2,-.85],pitch:-.20,fov:72},bed1:{spawn:n.spawn,aim:[-.6,-1.35],pitch:-.20,fov:72},bed2:{spawn:[-.9,1.3],aim:[1.28,-.35],pitch:-.12,fov:78},bed3:{spawn:n.spawn,aim:[.3,-.35],pitch:-.20,fov:72}};const v=study?{spawn:[2.152,.34],aim:[.7,-.65],pitch:-.20,fov:72}:views[rid];setMode('walk');camera.fov=v.fov;camera.updateProjectionMatrix();camera.position.set(t[0]+v.spawn[0],1.6,t[2]-v.spawn[1]);activeRoom=rid;aimSun(t[0]+v.spawn[0],t[2]-v.spawn[1]);yaw=tYaw=Math.atan2(-(v.aim[0]-v.spawn[0]),v.aim[1]-v.spawn[1]);pitch=tPitch=v.pitch;vx=vz=0;look();const stops=panoStops(rid);$('photo').style.display=stops.length?'block':'none';$('photo').textContent='Step into the photoreal 360';roomEnvironment(rid).then(env=>{if(activeRoom===rid&&env){scene.environment=env;Object.values(loaded).forEach(r=>r.traverse(o=>{if(o.isMesh)[].concat(o.material).forEach(m=>{m.envMapIntensity=m.roughness<.3?1.35:.42;m.needsUpdate=true})}))}});S.textContent='Drag to look · WASD / arrows to walk within this room. Esc returns to overview.';$('models').textContent='Return to apartment';$('load').textContent='Viewing '+names[rid]+'. Source design, draft placement.'}catch(e){if(shell)shell.visible=true;$('load').textContent='Could not load room: '+e.message}finally{loading=false;$('models').disabled=false}}
 const names={master:'Master + study',bed1:'Bedroom 1',bed2:'Bedroom 2',bed3:'Bedroom 3'};
 /* GLB space is x=sheet right, y=height, z=sheet down, so a plan point (x,y)
    stands at world (x, eye, -y). */
@@ -121,11 +191,11 @@ function gotoShellRoom(rid){const r=flat.rooms[rid];if(!r)return;
  if(shell)shell.visible=true;Object.values(loaded).forEach(o=>o.visible=false);
  $('models').textContent='Show bedroom models';
  setMode('walk');camera.fov=72;camera.updateProjectionMatrix();
- const[cx,cy]=r.centroid_xy;camera.position.set(cx,1.6,-cy);
- yaw=0;pitch=0;look();
+ const[cx,cy]=r.centroid_xy;camera.position.set(cx,1.6,-cy);aimSun(cx,-cy);
+ yaw=tYaw=0;pitch=tPitch=0;vx=vz=0;look();
  S.textContent='Drag to look \u00b7 WASD / arrows to move. Esc returns to overview.';
  $('load').textContent='In '+r.name+', '+r.area_m2+' m\u00b2. Shell only, no furniture modelled.'+(r.source==='inferred'?' Room extent read off ALD-01, not the drawing.':'');}
-try{[data,nav,flat]=await Promise.all(['scene','navigation','flat-rooms'].map(n=>fetch('assets/cad-draft/'+n+'.json').then(r=>{if(!r.ok)throw Error(r.status);return r.json()})));shell=await loadGLB('assets/cad-draft/flat-cad.glb');shell.traverse(o=>{if(o.isMesh){if(EMBED&&!o.name.startsWith('ROOM_'))for(const m of [].concat(o.material)){if(m.color)m.color.set(o.name.includes('door-leaf')?0x806a57:0x998a7b);m.roughness=.92;m.needsUpdate=true}const edges=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,30),new THREE.LineBasicMaterial({color:EMBED?0x514238:0x536d7d,transparent:true,opacity:EMBED?.72:.48}));o.add(edges)}});scene.add(shell);
+try{[data,nav,flat]=await Promise.all(['scene','navigation','flat-rooms'].map(n=>fetch('assets/cad-draft/'+n+'.json').then(r=>{if(!r.ok)throw Error(r.status);return r.json()})));shell=await loadGLB('assets/cad-draft/flat-cad.glb');shell.traverse(o=>{if(o.isMesh){o.castShadow=!o.name.startsWith('ROOM_');o.receiveShadow=true;if(EMBED&&!o.name.startsWith('ROOM_'))for(const m of [].concat(o.material)){if(m.color)m.color.set(o.name.includes('door-leaf')?0x806a57:0x998a7b);m.roughness=.92;m.needsUpdate=true}const edges=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,30),new THREE.LineBasicMaterial({color:EMBED?0x514238:0x536d7d,transparent:true,opacity:EMBED?.72:.48}));o.add(edges)}});scene.add(shell);
 if(flat&&flat.rooms){
  const labelSprites=[];
  function roomLabel(text,sub){
@@ -171,7 +241,22 @@ window.addEventListener('message',e=>{const m=e.data;if(!m||m.type!=='b34')retur
   else if(m.action==='walk')startWalk();
   else if(m.action==='room'&&m.room){data.transforms[m.room]?visit(m.room):gotoShellRoom(m.room)}
 });
-let down=false,px=0,py=0;renderer.domElement.onpointerdown=e=>{down=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)};renderer.domElement.onpointerup=()=>down=false;renderer.domElement.onpointermove=e=>{if(!down)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;if(mode==='walk'){yaw-=dx*.004;pitch=THREE.MathUtils.clamp(pitch-dy*.004,-1.1,1.1);look()}else if(mode==='orbit'||mode==='top'){mode='orbit';yaw-=dx*.005;pitch=THREE.MathUtils.clamp(pitch+dy*.005,.12,1.56);orbit()}};renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();if(mode!=='walk'){dist=THREE.MathUtils.clamp(dist*Math.exp(e.deltaY*.001),5,90);orbit()}},{passive:false});
+let down=false,px=0,py=0;renderer.domElement.onpointerdown=e=>{down=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)};renderer.domElement.onpointerup=()=>down=false;renderer.domElement.onpointermove=e=>{if(!down)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;if(mode==='walk'){tYaw-=dx*.0034;tPitch=THREE.MathUtils.clamp(tPitch-dy*.0034,-1.1,1.1)}else if(mode==='orbit'||mode==='top'){mode='orbit';yaw-=dx*.005;pitch=THREE.MathUtils.clamp(pitch+dy*.005,.12,1.56);orbit()}};renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();if(mode!=='walk'){dist=THREE.MathUtils.clamp(dist*Math.exp(e.deltaY*.001),5,90);orbit()}},{passive:false});
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key.toLowerCase()]=true;const k=e.key.toLowerCase();if(k==='p'&&activeRoom&&panoStops(activeRoom).length){togglePhoto();return}if(k==='n'&&photoMode){enterPhoto((photoIdx+1)%panoStops(activeRoom).length);return}if(e.key==='Escape'){if(photoMode){exitPhoto();return}home()}});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});for(const b of document.querySelectorAll('[data-key]')){b.onpointerdown=e=>{keys[b.dataset.key]=true;b.setPointerCapture(e.pointerId)};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.key]=false}window.addEventListener('resize',fit);
-let last=performance.now();function tick(now){requestAnimationFrame(tick);const dt=Math.min((now-last)/1000,.04);last=now;if(photoMode){panoCam.rotation.order='YXZ';panoCam.rotation.set(pitch,yaw,0);renderer.render(panoScene,panoCam);return}if(mode==='walk'&&nav){const f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0),r=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),speed=dt*1.4/Math.max(1,Math.hypot(f,r));const dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;if(canWalk(camera.position.x+dx,camera.position.z))camera.position.x+=dx;if(canWalk(camera.position.x,camera.position.z+dz))camera.position.z+=dz}renderer.render(scene,camera)}fit();requestAnimationFrame(tick);
+let last=performance.now(),last0=performance.now();function tick(now){requestAnimationFrame(tick);const dt=Math.min((now-last)/1000,.04);last=now;watchFrame((now-last0)/1000||dt);last0=now;if(photoMode){const e=Math.min(1,17*dt);yaw+=(tYaw-yaw)*e;pitch+=(tPitch-pitch)*e;panoCam.rotation.order='YXZ';panoCam.rotation.set(pitch,yaw,0);renderer.render(panoScene,panoCam);return}if(mode==='walk'&&nav){
+  /* Position used to be driven straight off the key state, so movement and
+     looking both started and stopped on a single frame. Ease the angles toward
+     a target and run the feet on a velocity with acceleration and drag: the
+     same keys, but it reads as walking rather than teleporting a step at a
+     time. */
+  const f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0),r=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+  const n=Math.max(1,Math.hypot(f,r)),TOP=1.45,ACC=9.0,DRAG=11.0;
+  const wx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)/n,wz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)/n;
+  if(f||r){vx+=(wx*TOP-vx)*Math.min(1,ACC*dt);vz+=(wz*TOP-vz)*Math.min(1,ACC*dt)}
+  else{const k=Math.max(0,1-DRAG*dt);vx*=k;vz*=k}
+  const dx=vx*dt,dz=vz*dt;
+  if(canWalk(camera.position.x+dx,camera.position.z))camera.position.x+=dx;else vx=0;
+  if(canWalk(camera.position.x,camera.position.z+dz))camera.position.z+=dz;else vz=0;
+}
+if(mode==='walk'){const e=Math.min(1,17*dt);yaw+=(tYaw-yaw)*e;pitch+=(tPitch-pitch)*e;look()}if(composer)composer.render();else renderer.render(scene,camera)}fit();requestAnimationFrame(tick);
 })();</script></html>
