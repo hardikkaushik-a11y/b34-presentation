@@ -3,29 +3,25 @@
 **What this is for and where it is going: [GOAL.md](GOAL.md).** This file is how it
 works; that one is why it exists.
 
-Open `index.html` in any browser. No server, no install, no internet needed.
-Everything is inside this folder.
-
-If you would rather serve it (faster, and half the download if you ever host it):
+Serve the folder locally because the embedded CAD viewer loads GLB and JSON assets with
+browser requests:
 
 ```bash
-python3 serve.py 8741      # then http://127.0.0.1:8741
+python3 serve.py 8746      # then http://127.0.0.1:8746
 ```
 
 ## What it does
 
-- **3D** - the whole flat as room volumes from ALD-01. Drag to orbit, right-drag to pan,
-  scroll to zoom, hover for a name, click a room to open its panel.
+- **3D Plan** - the CAD-derived whole-flat shell at drawing scale. Drag to orbit, scroll
+  to zoom, select a room from the sidebar, or enter the neutral shell walk.
 - **Plan** - the ALD-01 drawing, full bleed.
 - **Present** - fullscreen client deck, all 24 renders. Arrows or click, Esc to exit.
 - **Room panel** - dimensions, design note, render thumbnails, lightbox.
-- **Walk this room** - first person inside the real SketchUp model. WASD or arrows to
-  move, mouse to look, Shift to stride, Esc to release the cursor, Exit to leave.
-  On a phone: drag to look, joystick bottom-left.
-- **360 tour** - stand inside a path-traced panorama of the room and step between
-  viewpoints, the way a Matterport or CloudPano tour works. Drag to look, scroll to
-  zoom, click a floor marker or press its number to move. The minimap top-right shows
-  where you are. This is the photoreal view; the walkthrough is the spatial one.
+- **Walk** - first person inside the neutral CAD shell. This explains circulation and
+  remains deliberately separate from approved room appearance.
+- **360 tour** - shown to clients only for rooms backed by architect V-Ray spherical
+  panoramas. Bedroom 2 is the current production proof. Other panorama experiments
+  remain internal until replaced by V-Ray output.
 - **Plan view** (button, or Tab while walking) - lifts the camera and clips the ceiling
   away so you see the whole room from above, then click any floor to stand there.
   Without it a visitor standing in the Master Bedroom never discovers that the seating
@@ -113,7 +109,8 @@ are untouched.
 
 ## Editing the presentation - `project.js`
 
-Never touch `index.html`.
+Use `project.js` for room metadata and render assignments. The application shell lives
+in `index.html`; change it only when adding or fixing interface behaviour.
 
 ```js
 {

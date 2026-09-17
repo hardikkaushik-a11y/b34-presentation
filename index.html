@@ -72,6 +72,12 @@ body{
 /* ---------- stage ---------- */
 #stage{flex:1;position:relative;overflow:hidden}
 #c3d{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+#cadview{position:absolute;inset:0;display:none;background:#edf1f3}
+#cadview iframe{display:block;width:100%;height:100%;border:0;background:#edf1f3}
+#cadlabel{position:absolute;left:24px;top:22px;z-index:4;padding:9px 12px;
+  background:rgba(20,17,14,.82);border:1px solid var(--line);border-radius:4px;
+  color:var(--accentSoft);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  pointer-events:none;backdrop-filter:blur(8px)}
 #planview{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#F6F3EC;padding:26px}
 #planview img{max-width:100%;max-height:100%;object-fit:contain}
 #hint{
@@ -248,8 +254,8 @@ body{
     <div id="navhead">Rooms</div>
     <div id="rooms"></div>
     <div id="tools">
-      <button class="tb" id="t3d" style="display:none" aria-hidden="true">3D</button>
-      <button class="tb on" id="tplan">Plan</button>
+      <button class="tb on" id="t3d">3D Plan</button>
+      <button class="tb" id="tplan">Plan</button>
       <button class="tb" id="tpres">Present</button>
       <button class="tb" id="tflat" title="Walk the whole flat">Walk</button>
     </div>
@@ -258,9 +264,13 @@ body{
   <main id="stage">
     <button id="mobtog">☰</button>
     <canvas id="c3d"></canvas>
+    <div id="cadview">
+      <iframe id="cadframe" src="cad-viewer.html?embed=1" title="Interactive CAD-based 3D plan"></iframe>
+      <div id="cadlabel">CAD-based spatial plan</div>
+    </div>
     <div id="planview"><img id="planimg" alt="Floor plan"></div>
     <div id="badge"></div>
-    <div id="hint">Drag to orbit · Scroll to zoom · Click a room</div>
+    <div id="hint">Drag to orbit · Scroll to zoom · Select a room</div>
     <div id="tip"></div>
 
     <section id="drawer">
@@ -380,7 +390,7 @@ P.rooms.forEach(r=>{
   d.dataset.id=r.id;
   d.innerHTML=`<span class="dot" style="background:${GROUP[r.group]}"></span>
     <span class="nm">${r.name}</span>
-    <span class="ct">${r.shots.length||'-'}</span>`;
+    <span class="ct">${r.shots.length?r.shots.length+' views':'In progress'}</span>`;
   d.onclick=()=>selectRoom(r.id,true);
   listEl.appendChild(d);
 });
@@ -611,17 +621,14 @@ function selectRoom(id,fromList){
       im.onclick=()=>openLB(r,i); sh.appendChild(im);
     });
   }else{
-    sh.innerHTML=`<div id="dempty" style="grid-column:1/-1">No renders assigned to this space yet.<br><br>
-      Add filenames to the <code>shots</code> array for <code>${r.id}</code> in <code>project.js</code>.</div>`;
+    sh.innerHTML='<div id="dempty" style="grid-column:1/-1"><b>Design in progress</b><br><br>This space is shown in the spatial plan. Its finishes, furniture and final visual material will be added after design approval.</div>';
   }
-  $('#dwalk').classList.toggle('show',!!r.glb);
-  $('#dtour').classList.toggle('show',!!(window.ROOMTOUR||{})[r.id]);
+  /* Real-time bedroom materials are useful for internal checking but are not at the
+     architect's V-Ray standard. Keep them out of the client presentation. */
+  $('#dwalk').classList.toggle('show',false);
+  $('#dtour').classList.toggle('show',(window.ROOMTOUR||{})[r.id]?.source==='vray');
   $('#drawer').classList.add('open');
-  if(view==='3d'&&fromList){
-    const m=roomMeshes[r.id],c=m&&m.center;
-    target.set(c?c.x:r.plan.x+r.plan.w/2,O ? 0.08 : H*0.42,c?c.z:r.plan.y+r.plan.d/2);
-    dist=Math.max(SPAN*.62,Math.max(r.plan.w,r.plan.d)*4.6); updateCam();
-  }
+  if(view==='3d'&&fromList) cadCommand({action:'room',room:id});
 }
 $('#dclose').onclick=()=>{$('#drawer').classList.remove('open');activeId=null;paint();
   document.querySelectorAll('.rm').forEach(e=>e.classList.remove('on'));};
@@ -639,22 +646,27 @@ $('#lbx').onclick=()=>$('#lb').classList.remove('on');
 $('#lb').onclick=e=>{if(e.target.id==='lb')$('#lb').classList.remove('on');};
 
 /* ---------- views ---------- */
-/* The traced pseudo-3D overview is not a reliable architectural view. Keep its
-   implementation parked for a later CAD replacement and open on the architect's
-   actual ALD-01 drawing instead. */
-let view='plan';
+/* The client-facing 3D plan is the CAD-derived shell in cad-viewer.html. The old
+   traced texture scene remains parked in this file but is never presented. */
+const cadFrame=$('#cadframe');
+function cadCommand(message){
+  if(cadFrame&&cadFrame.contentWindow)cadFrame.contentWindow.postMessage(Object.assign({type:'b34'},message),'*');
+}
+let view='3d';
 function setView(v){
   view=v;
   $('#t3d').classList.toggle('on',v==='3d');
   $('#tplan').classList.toggle('on',v==='plan');
-  canvas.style.display = v==='3d'?'block':'none';
+  canvas.style.display='none';
+  $('#cadview').style.display=v==='3d'?'block':'none';
   $('#planview').style.display = v==='plan'?'flex':'none';
-  $('#hint').style.display = v==='3d'?'block':'none';
+  $('#hint').style.display='none';
   $('#tip').style.opacity=0;
+  if(v==='3d')cadCommand({action:'orbit'});
 }
 $('#t3d').onclick=()=>setView('3d');
 $('#tplan').onclick=()=>setView('plan');
-setView('plan');
+setView(new URLSearchParams(location.search).get('view')==='plan'?'plan':'3d');
 
 /* ---------- presentation ---------- */
 let slides=[],pi=0;
@@ -927,9 +939,17 @@ function wBuild(gltf,nav,roomId){
    generic rather than tuned per material. */
 /* each room reflects itself now, built from its own render by build/make_env.py */
 const ENVCACHE={};
+/* Where Ar. Shivangi has rendered a real V-Ray panorama of the room, that is a
+   truer description of its light than anything built from our Cycles output, so
+   it takes precedence. Rooms she has not shot yet keep the generated env. */
+function envSource(id){
+  const T=(window.ROOMTOUR||{})[id];
+  if(T&&T.source==='vray'&&T.points&&T.points.length)return P.tourPath+T.points[0].file;
+  return P.roomPath+id+'_env.jpg';
+}
 function roomEnv(id,then){
   if(ENVCACHE[id]){then(ENVCACHE[id]);return;}
-  new THREE.TextureLoader().load(P.roomPath+id+'_env.jpg',
+  new THREE.TextureLoader().load(envSource(id),
     t=>{ t.mapping=THREE.EquirectangularReflectionMapping;
          const pm=new THREE.PMREMGenerator(wrend); pm.compileEquirectangularShader();
          ENVCACHE[id]=pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose();
@@ -1249,7 +1269,7 @@ function exitWalk(){
   cancelAnimationFrame(wraf); wraf=0;
 }
 $('#wexit').onclick=exitWalk;
-if($('#tflat'))$('#tflat').onclick=()=>{ if(P.wholeFlat)enterWalk(P.wholeFlat); };
+if($('#tflat'))$('#tflat').onclick=()=>{setView('3d');cadCommand({action:'walk'});};
 $('#dwalk').onclick=()=>{const r=P.rooms.find(x=>x.id===activeId); if(r)enterWalk(r);};
 
 /* pointer lock look */

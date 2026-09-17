@@ -1,114 +1,67 @@
-# B-34 - What we are actually trying to build
+# B-34 - Product goal and current truth
 
-A four-bedroom residential interior fit-out in Dwarka, New Delhi, designed by
-Ar. Shivangi Kaushik at Studio Spindle. The design is finished and approved. Nothing
-here designs anything - the job is to let people *experience* a flat that does not
-exist yet.
+B-34 is a residential interior project in Dwarka, New Delhi by Ar. Shivangi Kaushik at Studio Spindle. This product lets the client understand the flat before construction through one browser link.
 
----
+## Client experience
 
-## The goal
+The public presentation must provide four layers without making the client choose between separate sites:
 
-**Put the client inside his flat before it is built.**
+1. **Accurate 3D spatial plan** - the CAD-derived shell, used to understand layout and circulation.
+2. **Exact 2D drawing** - the architect's ALD-01 plan, kept as the dimensional reference.
+3. **Approved visual material** - render galleries for spaces that have been designed.
+4. **Photoreal 360 tours** - V-Ray spherical panoramas for designed rooms, with deliberate arrival views and movement between capture points.
 
-A drawing asks someone to imagine a room. A render shows them one angle of it, chosen
-by the architect. Neither lets them stand in the middle and turn around. That is the
-gap this closes.
+The presentation also includes a fullscreen render deck. A separate technical review page must not be exposed as a second client destination.
 
-Two audiences, and they want different things:
+## Current design coverage
 
-- **The client** wants to walk through it himself, on his phone, from a link someone
-  sent him. No app, no headset, no appointment.
-- **The practice** wants a piece that shows the work instead of describing it - one
-  link that stands on its own in a pitch, a portfolio, or a message.
+Designed visual material currently exists for:
 
----
+- Master Bedroom and study extension
+- Bedroom 1
+- Bedroom 2
+- Bedroom 3
+- Toilet 3
+- One Toilet 4 render
 
-## The standard
+Bedroom 2 currently has the first client-ready V-Ray tour with two panorama positions.
 
-**Photoreal, not "3D".** The bar is that it reads as a photograph of a real room, not a
-render of a model. If it looks like a 3D visualisation, it has failed - however
-accurate the geometry is.
+The following spaces are spatially represented by the CAD shell but their interior design is still in progress:
 
-Concretely that means it has to match the architect's own renders. Her renders are the
-authority on palette, materials, finishes and light. Everything built here is measured
-against them rather than judged by eye: each room's panoramas sit within a few percent
-of the median luminance of that room's own render set.
+- Living room
+- Dining
+- Kitchen
+- Store
+- Lobby and entrance
+- Balcony
+- Walk-in wardrobe
+- Toilets without approved render coverage
 
-**Faithful, not reinterpreted.** The plan wins for position, the renders win for
-appearance. Any deviation is an error, not a creative choice.
+Do not invent approved finishes, furniture or products for these areas. A neutral spatial shell is correct until the architect completes or approves the design.
 
----
+## Future deliverables
 
-## The three deliverables
+### Photoreal room tours
 
-### 1. A photorealistic walkthrough video
+Create 2 to 4 distinct V-Ray spherical panoramas per designed room, normally 4096 x 2048. The architect's V-Ray output is the authority for materials, lighting and colour. The web viewer supplies navigation and presentation only.
 
-A short film of the flat - 60 to 90 seconds, 1080p, built as separate takes joined by
-cuts rather than one continuous wander. Eye-level camera, restrained pace, shots that
-land on furniture and features and never linger on blank wall.
+### Cinematic project film
 
-This is the piece you send to someone who will not click anything. It does the work for
-them.
+Create a 30 to 60 second architecture film from approved room designs. Use real camera motion through the approved geometry, rendered as checkpointed image sequences. A panorama turn or slideshow is not a substitute for translational camera movement.
 
-**Status: not built.** Everything so far has gone into the interactive pieces.
+### Whole-flat walkthrough
 
-### 2. An interactive walkthrough
+Connect every designed area after living, dining, kitchen, lobby, balcony and remaining wet areas exist as approved models. Until then, the CAD shell can explain circulation but cannot honestly represent the finished interior.
 
-The client drives. Free first-person movement inside the real model, with collision so
-you cannot walk through walls. Jump straight to any room without walking the route. A
-floor-plan minimap so orientation is never lost. Runs in a normal phone browser.
+### Product fidelity
 
-This is the piece that answers "what is it actually like in there?"
+Where the architect specifies a real product such as Jaquar sanitaryware, Kajaria tiles, appliances or lighting, use the manufacturer's exact model, dimensions, finish and texture when available. Keep product metadata beside the visual asset so substitutions remain traceable.
 
-**Status: built.** Walk mode, room navigation, plan view, minimap.
+## Standard
 
-### 3. A 360 tour
-
-Stand inside a path-traced panorama of the room and look anywhere. Step between
-viewpoints by clicking markers on the floor, the way a Matterport or CloudPano tour
-works. Each stop arrives facing something worth seeing.
-
-This is the photoreal one. The walkthrough is the spatial one - it tells you how the
-rooms connect and how big they feel. The tour tells you what it looks like. They are
-different jobs and the page has both.
-
-**Status: built.** 22 panoramas across four rooms, path-traced in Cycles.
-
----
-
-## Where it stands, honestly
-
-Live: https://hardikkaushik-a11y.github.io/b34-presentation/
-
-**What works.** The interactive walkthrough and the 360 tour, across the Master Bedroom,
-Bedroom 1, Bedroom 2 and Bedroom 3. Plus a 3D overview of the whole flat, the plan, a
-client deck of the renders, and a set of coloured path-traced floor plans.
-
-**What does not exist yet.**
-
-- **The video.** Deliverable 1, not started.
-- **Half the flat.** Only the four bedrooms are modelled. Living, dining, kitchen,
-  store, lobby, balcony, walk-in wardrobe and the toilets have no model and no renders -
-  and that is the half a visitor walks into first.
-- **Proof it works on a phone.** The whole point is that the client opens this on his
-  phone, and nobody has tried it on one yet. The site is 47 MB.
-
-**The one place it is not 1:1.** The V-Ray shaders did not survive export from
-SketchUp - materials that lived only in V-Ray arrived as missing-texture placeholders.
-The palette was rebuilt by sampling the architect's renders directly. So: her geometry,
-her palette, real path-traced bounce light, but not her original shaders. That closes
-most of the gap, not all of it.
-
----
-
-## Why it is built the way it is
-
-Everything is a single folder of static files. No server, no build step, no framework,
-no account. `index.html` opens straight from disk, or from any web host.
-
-That is deliberate. This has to survive being emailed, handed over, opened in three
-years, and opened by someone who will not install anything. A dependency is a thing that
-breaks later.
-
-See `README.md` for how it works and how to change it.
+- The drawing controls position and dimensions.
+- The architect's approved renders and V-Ray files control appearance.
+- Manufacturer data controls branded products.
+- Unfinished design is labelled as in progress.
+- One public link is the client entry point.
+- Internal review tools remain available to the production team but stay out of the client flow.
