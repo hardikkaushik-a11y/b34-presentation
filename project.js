@@ -95,12 +95,17 @@ window.PROJECT = {
       dims:"9'-11\" x 13'-9\"",   plan:{x:0.00,y:1.00,w:3.02,d:4.19},
       glb:"bed1.glb",
       note:"Tan upholstered headboard, fluted wardrobe with brass inlay "+
-           "handles, walnut display joinery and floating desk.",
+           "handles, walnut display joinery and floating desk. Opens into a "+
+           "walk-in wardrobe adjacent to Toilet 1.",
       shots:["r22.jpg","r23.jpg","r20.jpg","r21.jpg","r15.jpg"] },
 
-    { id:"wiw",     name:"Walk-in Wardrobe",group:"service",
-      dims:"-",                   plan:{x:0.00,y:5.19,w:1.83,d:1.37},
-      note:"Off Bedroom 1, adjacent to TLT 1.", shots:[] },
+    /* The walk-in wardrobe is not a room a client chooses separately - it's a
+       closet off Bedroom 1's own footprint, same as the ensuite toilets are
+       part of their bedrooms rather than independent destinations. Its
+       geometry stays in flat-rooms.json for area accounting and so the 3D
+       shell has a real floor there instead of a hole; it just isn't listed
+       or labelled on its own. overviewPlan.regions below repoints its 2D
+       traced area to "bed1" so clicking it still selects the right room. */
 
     { id:"tlt1",    name:"Toilet 1",        group:"service",
       dims:"-", plan:{x:1.83,y:5.19,w:1.37,d:1.37}, note:"", shots:[] },
@@ -145,7 +150,7 @@ window.PROJECT = {
       {id:"kitchen",poly:[[430,1060],[1125,1060],[1125,1435],[430,1435]], label:[825,1280]},
       {id:"store",  poly:[[350,1120],[610,1120],[610,1415],[350,1415]], label:[485,1310]},
       {id:"living", poly:[[180,322],[610,322],[610,1060],[180,1060]], label:[410,720]},
-      {id:"wiw",    poly:[[12,405],[170,405],[170,735],[12,735]], label:[82,585]},
+      {id:"bed1",   poly:[[12,405],[170,405],[170,735],[12,735]], label:[82,585]},
       {id:"tlt1",   poly:[[170,405],[300,405],[300,735],[170,735]], label:[235,585]},
       {id:"bed1",   poly:[[12,735],[300,735],[300,1405],[12,1405]], label:[155,1090]}
     ]
