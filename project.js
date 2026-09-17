@@ -75,21 +75,21 @@ window.PROJECT = {
       note:"Channel-tufted headboard with concealed cove lighting, "+
            "full-height cream lacquer wardrobe with brass handles, "+
            "marble-top dresser and arched mirror. 6'-0\" x 6'-0\" bed.",
-      shots:["r00.jpg","r01.jpg","r03.jpg","r04.jpg","r05.jpg","r06.jpg","r02.jpg","r07.jpg"] },
+      shots:["master_hero_01.jpg","master_hero_02.jpg","master_hero_03.jpg","master_hero_04.jpg","master_hero_05.jpg","master_hero_06.jpg","master_hero_07.jpg","master_hero_08.jpg"] },
 
     { id:"bed2",    name:"Bedroom 2",       group:"sleeping",
       dims:"11'-0\" x 14'-9½\"",  plan:{x:10.21,y:4.33,w:3.35,d:4.50},
       glb:"bed2.glb",
       note:"Arched marble headboard niche, upholstered bench at the foot "+
            "of the bed, dressing table. 6'-0\" x 6'-0\" bed.",
-      shots:["r11.jpg","r10.jpg","r08.jpg","r09.jpg","r16.jpg"] },
+      shots:["bed2_hero_01.jpg","bed2_hero_02.jpg","bed2_hero_03.jpg","bed2_hero_04.jpg","bed2_hero_05.jpg","bed2_hero_06.jpg"] },
 
     { id:"bed3",    name:"Bedroom 3",       group:"sleeping",
       dims:"9'-11½\" x 12'-8\"",  plan:{x:7.18,y:10.41,w:3.03,d:3.86},
       glb:"bed3.glb",
       note:"Sculpted wave wall panel with concealed LED, charcoal bedding, "+
            "study desk with floating shelves, timber flooring. 6'-0\" x 6'-3\" bed.",
-      shots:["r14.jpg","r13.jpg","r18.jpg","r17.jpg","r12.jpg"] },
+      shots:["bed3_hero_01.jpg","bed3_hero_02.jpg","bed3_hero_03.jpg","bed3_hero_04.jpg","bed3_hero_05.jpg","bed3_hero_06.jpg"] },
 
     { id:"bed1",    name:"Bedroom 1",       group:"sleeping",
       dims:"9'-11\" x 13'-9\"",   plan:{x:0.00,y:1.00,w:3.02,d:4.19},
@@ -97,7 +97,7 @@ window.PROJECT = {
       note:"Tan upholstered headboard, fluted wardrobe with brass inlay "+
            "handles, walnut display joinery and floating desk. Opens into a "+
            "walk-in wardrobe adjacent to Toilet 1.",
-      shots:["r22.jpg","r23.jpg","r20.jpg","r21.jpg","r15.jpg"] },
+      shots:["bed1_hero_01.jpg","bed1_hero_02.jpg","bed1_hero_03.jpg","bed1_hero_04.jpg","bed1_hero_05.jpg"] },
 
     /* The walk-in wardrobe is not a room a client chooses separately - it's a
        closet off Bedroom 1's own footprint, same as the ensuite toilets are
