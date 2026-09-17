@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>B-34 · Studio Spindle</title>
 <script src="assets/lib/three.min.js"></script>
+<script src="assets/lib/GLTFLoader.js"></script>
+<script src="assets/lib/DRACOLoader.js"></script>
+<script src="assets/lib/draco/draco_inline.js"></script>
+<script src="assets/lib/pp/CopyShader.js"></script>
+<script src="assets/lib/pp/LuminosityHighPassShader.js"></script>
+<script src="assets/lib/pp/SAOShader.js"></script>
+<script src="assets/lib/pp/DepthLimitedBlurShader.js"></script>
+<script src="assets/lib/pp/UnpackDepthRGBAShader.js"></script>
+<script src="assets/lib/pp/EffectComposer.js"></script>
+<script src="assets/lib/pp/RenderPass.js"></script>
+<script src="assets/lib/pp/ShaderPass.js"></script>
+<script src="assets/lib/pp/MaskPass.js"></script>
+<script src="assets/lib/pp/SAOPass.js"></script>
+<script src="assets/lib/pp/UnrealBloomPass.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -243,6 +257,7 @@ body{
       <button class="tb on" id="t3d">3D Plan</button>
       <button class="tb" id="tplan">Plan</button>
       <button class="tb" id="tpres">Present</button>
+      <button class="tb" id="tflat" title="Walk the whole flat">Walk</button>
     </div>
   </aside>
 
@@ -1254,12 +1269,11 @@ function exitWalk(){
   cancelAnimationFrame(wraf); wraf=0;
 }
 $('#wexit').onclick=exitWalk;
-/* The Walk button is gone from the presentation. Walking the flat means walking
-   mostly undesigned shell - the entrance, living, dining and lobby have no
-   design yet - so it was the weakest thing here while being the most invitingly
-   labelled. The viewer still walks; it is just not offered from the client page
-   until there is something worth walking through. cad-viewer.html?walk=1 still
-   works directly. */
+/* Walk opens the viewer as its own page rather than through the iframe. Same
+   viewer either way, but this drops the parent's second three.js, its second
+   WebGL context and its parked scene, which is the whole reason walking felt
+   heavier here than in the standalone. */
+if($('#tflat'))$('#tflat').onclick=()=>{location.href='cad-viewer.html?walk=1';};
 $('#dwalk').onclick=()=>{const r=P.rooms.find(x=>x.id===activeId); if(r)enterWalk(r);};
 
 /* pointer lock look */
