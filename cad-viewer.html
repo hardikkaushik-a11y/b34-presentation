@@ -240,14 +240,16 @@ function canWalk(x,z){if(activeRoom){const n=window.ROOMNAV[activeRoom],t=data.t
 async function startWalk(){
  activeRoom=null;if(shell)shell.visible=true;
  const ids=Object.keys(data.transforms);
- /* Do not hold the walk hostage to 35 MB. Start walking immediately with
-    whatever has already arrived and let the rest appear as they land - you
-    walk in from the entrance, so the far bedrooms have time to turn up before
-    you reach them. Waiting for all four meant a stall on every visit. */
+ /* Wait for the rooms before starting. Letting the walk begin early and having
+    bedrooms appear as they landed meant furniture popping into a room you were
+    already standing in, which reads as broken rather than as fast. The idle
+    preload usually has them in already, so this is normally instant. */
+ if(ids.some(r=>!loaded[r])){
+  $('load').textContent='Loading the furnished rooms…';
+  try{await Promise.all(ids.map(rid=>room(rid)))}
+  catch(e){$('load').textContent='Some rooms did not load: '+e.message}
+ }
  modelsVisible=true;
- ids.filter(r=>!loaded[r]).forEach(rid=>room(rid).then(r=>{
-   if(modelsVisible){r.visible=true;overlayClip(r,rid,true)}
- }).catch(()=>{}));
  /* Clip back on. Taking it off to save Bedroom 2's slim wardrobe let the
     rooms' overhangs show in circulation instead - Bedroom 1 reaches 0.63 m past
     its boundary and that stub appeared as a wall standing in front of the room.
