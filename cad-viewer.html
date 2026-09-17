@@ -231,12 +231,14 @@ function canWalk(x,z){if(activeRoom){const n=window.ROOMNAV[activeRoom],t=data.t
 async function startWalk(){
  activeRoom=null;if(shell)shell.visible=true;
  const ids=Object.keys(data.transforms);
- if(ids.some(r=>!loaded[r])){
-  $('load').textContent='Loading the furnished rooms…';
-  try{await Promise.all(ids.map(rid=>room(rid)))}
-  catch(e){$('load').textContent='Some rooms did not load: '+e.message}
- }
+ /* Do not hold the walk hostage to 35 MB. Start walking immediately with
+    whatever has already arrived and let the rest appear as they land - you
+    walk in from the entrance, so the far bedrooms have time to turn up before
+    you reach them. Waiting for all four meant a stall on every visit. */
  modelsVisible=true;
+ ids.filter(r=>!loaded[r]).forEach(rid=>room(rid).then(r=>{
+   if(modelsVisible){r.visible=true;overlayClip(r,rid,false)}
+ }).catch(()=>{}));
  /* Clipped to the traced room boundary, the walk was cutting real joinery off
     every room: 0.38 m of Bedroom 2's slim wardrobe beside the window, 0.63 m
     from the Master and Bedroom 1, 1.57 m from Bedroom 3. The boundary is a
@@ -302,12 +304,17 @@ for(const rid of ids){const r=flat.rooms[rid],has=!!data.transforms[rid];
  b.title=has?'Furnished model':'Shell only, '+(r.source==='inferred'?'extent read off ALD-01':'extent from the drawing');
  b.onclick=()=>has?visit(rid):gotoShellRoom(rid);$('rooms').append(b);
  if(rid==='master'){const st=document.createElement('button');st.innerHTML='\u25c6 Master study';st.onclick=()=>visit('master',true);$('rooms').append(st)}}$('load').textContent='Shell ready.';home();
-/* Pull the furnished rooms in quietly while the visitor is still looking at the
-   plan, so pressing Walk does not stall on 36 MB. Failure here is not fatal -
-   startWalk loads anything still missing and reports it there. */
-Promise.all(Object.keys(data.transforms).map(rid=>room(rid).then(r=>{
-  r.visible=modelsVisible;overlayClip(r,rid,true);
-}).catch(()=>{}))).then(()=>{if(mode==='orbit')$('load').textContent='Shell and bedroom models ready.'});}catch(e){$('load').textContent='Could not load draft. Open through the local server, not file://.';console.error(e)}
+/* Pull the furnished rooms in quietly so pressing Walk does not stall on 36 MB.
+   Deferred until the browser is idle: kicking 36 MB off immediately competes
+   with the shell and the plan for bandwidth and makes the page feel like it
+   takes ages to open, when the part the visitor is actually looking at is
+   only a few hundred KB. Failure here is not fatal - startWalk loads anything
+   still missing and reports it there. */
+const preloadRooms=()=>Promise.all(Object.keys(data.transforms).map(rid=>room(rid).then(r=>{
+  r.visible=modelsVisible;overlayClip(r,rid,false);
+}).catch(()=>{}))).then(()=>{if(mode==='orbit')$('load').textContent='Shell and bedroom models ready.'});
+if(window.requestIdleCallback)requestIdleCallback(preloadRooms,{timeout:4000});
+else setTimeout(preloadRooms,2500);}catch(e){$('load').textContent='Could not load draft. Open through the local server, not file://.';console.error(e)}
 $('overview').onclick=()=>home();$('top').onclick=()=>home(true);$('planBtn').onclick=()=>setMode('plan');$('walk').onclick=startWalk;$('models').onclick=toggleModels;$('photo').onclick=togglePhoto;
 /* The polished presentation owns the visible navigation. This viewer stays focused
    on rendering and accepts small, explicit commands from its parent page. */
