@@ -498,8 +498,8 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     const S = slots(rid, { floor: ['darkoak', 0x5E4A3A], walls: ['warmwhite', 0xEDE6DA], feature: ['pebble', 0xB5B0A9],
       upholstery: ['dove', 0xBAB6AF], accent: ['navy', 0x2F3743], joinery: ['pebble', 0xB8B3AC], woodwork: ['walnut', 0x6A4731] });
     floor(R, floors.bed3, S.floor);
-    // the floor runs on to the window line, where her drapes hang (past the flat's floor)
-    floor(R, [[8.569, 13.218], [11.61, 13.218], [11.61, 13.46], [8.569, 13.46], [8.569, 13.218]], S.floor);
+    // the floor runs on into her window bay, up to its glass and the sliding door
+    floor(R, [[8.40, 13.427], [8.40, 14.392], [10.60, 14.392], [10.60, 13.65], [11.61, 13.65], [11.61, 13.218], [8.569, 13.218], [8.569, 13.427], [8.40, 13.427]], S.floor);
     // wave panel on the bed wall, lit along its crest
     {
       const { g, w } = frame(R, [11.57, 11.61, 9.336, 13.198], 'x-');
@@ -537,9 +537,10 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
       }
       fixed(rid, [8.57, 10.39, 9.336, 9.89]);
     }
-    // Her drapes follow a window bay beyond the room's line that the flat's shell does
-    // not model, so they hang straight across the opening at the end of the side walls.
-    curtains(R, rid, [[8.60, 13.44], [11.58, 13.44]], { color: 0xA89A8A, gather: [[0, 1], [1, 0]] });
+    // her drapes follow the bay: across the sliding door, along the north glass, round
+    // the step
+    curtains(R, rid, [[8.60, 13.46], [8.60, 14.33], [10.53, 14.33], [10.53, 13.72], [11.56, 13.72]],
+             { color: 0xA89A8A, gather: [[0, 1], [1, 0], [1, 2], [2, 1], [3, 4], [4, 3]] });
 
     movable(rid, 'bed', 'Bed', 'bed', [9.49, 11.46, 10.98, 12.82], G =>
       bed(G, { box: [9.49, 11.46, 10.98, 12.82], face: 'x-', base: S.upholstery, baseTop: 0.36, baseR: 0.06,
@@ -637,11 +638,12 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
 
   const rooms = Object.fromEntries(zone.rooms.map(r => [r.id, r]));
   function ring(id) { return rooms[id].outline; }
-  // The rings cut out of the flat's floor for each bedroom's own floor. Bedroom 3's
-  // north edge stops 3 mm short of the flat floor's edge there, so the cut stays inside.
+  // The rings cut out of the flat's floor for each bedroom's own floor. Bedroom 3's is
+  // the drawn room (its outline now runs into the bay, which has no flat floor), its
+  // north edge 3 mm short of the flat floor's edge there, so the cut stays inside.
   const floors = {
     bed1: ring('bed1'), bed2: ring('bed2'), master: ring('master'),
-    bed3: ring('bed3').map(([x, y]) => [x, Math.abs(y - 13.198) < 1e-6 ? 13.215 : y]),
+    bed3: [[7.922, 12.525], [8.569, 12.525], [8.569, 13.215], [11.61, 13.215], [11.61, 9.336], [7.922, 9.336], [7.922, 12.525]],
   };
   const cladRooms = {};
   const roots = { bed2: bedroom2(), bed1: bedroom1(), bed3: bedroom3(), master: master() };

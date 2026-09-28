@@ -215,6 +215,26 @@ function backDir(o) {
 // procedural style (bedrooms.js). Her finishes are the defaults; each room has its own
 // finish slots and movable furniture. Built before the shell, because each bedroom's
 // floor is cut out of the flat's floor.
+// ------------------------------------------------------------------ Bedroom 3's bay and door
+// Her Bedroom 3 runs past the drawing's room line into a window bay, whose west side is
+// a full-height sliding glass door onto a strip that joins the balcony. The shell has
+// neither the bay nor the strip's floor, so both are added here, before anything that
+// reads the rooms is built.
+const BAY = [[8.40, 13.198], [8.40, 14.392], [10.60, 14.392], [10.60, 13.65], [11.61, 13.65], [11.61, 13.198], [8.40, 13.198]];
+const STRIP = [[7.92, 12.639], [7.92, 14.392], [8.40, 14.392], [8.40, 13.427], [8.269, 13.427], [8.269, 12.825], [8.244, 12.825], [8.244, 12.639], [7.92, 12.639]];
+{
+  const bed3 = zone.rooms.find(r => r.id === 'bed3'), bal = zone.rooms.find(r => r.id === 'balcony');
+  // the room now reaches the bay's glass; the door is its west edge
+  bed3.outline = [[7.922, 12.525], [8.569, 12.525], [8.569, 13.427], [8.40, 13.427], [8.40, 14.392], [10.60, 14.392],
+                  [10.60, 13.65], [11.61, 13.65], [11.61, 9.336], [7.922, 9.336], [7.922, 12.525]];
+  bed3.plinths = [bed3.island, BAY];
+  bed3.island = [...bed3.island, ...BAY];
+  // the strip is balcony: its floor, and the balcony's outline runs round it to the door
+  zone.floor.push({ outer: STRIP, holes: [] });
+  const i = bal.outline.findIndex(([x, y]) => x === 7.9 && y === 14.62);
+  if (i >= 0) bal.outline.splice(i + 1, 0, [7.9, 14.392], [8.40, 14.392], [8.40, 13.427], [8.269, 13.427], [8.269, 12.825], [8.244, 12.825], [8.244, 12.639], [7.92, 12.639]);
+  bal.floor = [...bal.floor, { outer: STRIP, holes: [] }];
+}
 const bedrooms = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRing });
 const bedroomFloors = Object.values(bedrooms.floors);
 // the bedroom rings that sit wholly inside a floor polygon and clear of its own holes
@@ -256,10 +276,46 @@ function buildShell(group, { plinth, floor, walls, glass }) {
   }
   return group;
 }
-const shell = buildShell(new THREE.Group(), { plinth: zone.zone, floor: zone.floor, walls: zone.walls, glass: zone.glass });
+const shell = buildShell(new THREE.Group(), { plinth: [zone.zone, BAY], floor: zone.floor, walls: zone.walls, glass: zone.glass });
 scene.add(shell);
 // each bedroom's own wall paint, dropped by the cutaway like the walls behind it
 for (const g of Object.values(bedrooms.cladding)) scene.add(g);
+
+// Bedroom 3's bay glass and its sliding door to the balcony, seen from both rooms.
+// Each part stands from the floor so the cutaway drops it with the walls.
+const link = new THREE.Group(); link.userData.cladding = true; link.userData.rooms = ['bed3', 'balcony', 'wiw'];
+M.doorFrame = new THREE.MeshPhysicalMaterial({ color: 0x1C1C1C, metalness: 0.6, roughness: 0.4 });
+function glassPane(a, b, z0, z1) {
+  const A = W(...a), Bv = W(...b), len = A.distanceTo(Bv);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(len, z1 - z0), M.glass);
+  m.position.set((A.x + Bv.x) / 2, (z0 + z1) / 2, (A.z + Bv.z) / 2); m.rotation.y = -Math.atan2(Bv.z - A.z, Bv.x - A.x);
+  m.renderOrder = 2; m.userData.glass = { cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2 };
+  return m;
+}
+for (const [a, b] of [[[8.45, 14.392], [10.60, 14.392]], [[10.60, 14.392], [10.60, 13.65]], [[10.60, 13.65], [11.61, 13.65]]]) link.add(glassPane(a, b, 0.02, CUT));
+// a floor-up group standing at plan (x, y), with the cutaway's wall info
+function standing(x, y) {
+  const g = new THREE.Group(), c = W(x, y); g.position.set(c.x, 0, c.z);
+  g.userData.wall = { z0: 0, z1: CUT, cx: x, cy: y }; link.add(g); return g;
+}
+// jambs at both ends of the opening, a head at the cut
+for (const y of [13.427, 14.392]) standing(8.42, y).add(mesh(new THREE.BoxGeometry(0.06, CUT, 0.05).translate(0, CUT / 2, 0), M.doorFrame));
+// two panels, north one fixed, south one sliding north behind it; plan y runs to world -z
+const DOOR = { y0: 13.427, y1: 14.392 }, pw = (DOOR.y1 - DOOR.y0) / 2 + 0.02;
+function doorPanel(x, y) {
+  const g = standing(x, y), H = CUT - 0.004, t = 0.035;
+  for (const [w, h, py, pz] of [[t, H, H / 2, pw / 2 - 0.02], [t, H, H / 2, -pw / 2 + 0.02], [t, 0.05, 0.025, 0], [t, 0.05, H - 0.025, 0]]) {
+    const f = mesh(new THREE.BoxGeometry(w, h, pz ? 0.04 : pw), M.doorFrame, 0, py, pz); f.userData.door = true; g.add(f);
+  }
+  const gl = new THREE.Mesh(new THREE.PlaneGeometry(pw - 0.08, H - 0.1), M.glass);
+  gl.rotation.y = Math.PI / 2; gl.position.set(0, H / 2, 0); gl.renderOrder = 2; gl.userData.door = true; g.add(gl);
+  g.userData.door = true;
+  return g;
+}
+doorPanel(8.435, DOOR.y1 - pw / 2);
+const slider = doorPanel(8.405, DOOR.y0 + pw / 2), sliderZ = slider.position.z;
+scene.add(link);
+let doorOpen = 0, doorTarget = 0;
 
 // ------------------------------------------------------------------ furniture
 const pieces = new THREE.Group(); scene.add(pieces);
@@ -752,7 +808,9 @@ async function focusRoom(r) {
   shell.visible = false;
   for (const g of pieceGroups) g.visible = members.includes(g.userData.home) && !g.userData.removed;
   for (const [id, root] of Object.entries(modelRoots)) root.visible = members.includes(id);
-  for (const g of scene.children) if (g.userData.cladding) g.visible = members.includes(g.userData.room) && !g.userData.off;
+  // a knee-height copy left from the last bedroom must not follow you into the next room
+  for (const low of Object.values(lowCopies)) low.visible = false;
+  for (const g of scene.children) if (g.userData.cladding) g.visible = (g.userData.rooms || [g.userData.room]).some(id => members.includes(id)) && !g.userData.off;
   labels.forEach(l => l.el.hidden = true);
   titleK.textContent = 'B-34 · Dwarka · The flat'; titleH.textContent = r.name;
   back.hidden = false;
@@ -761,6 +819,7 @@ async function focusRoom(r) {
   if (r.model && !modelRoots[r.id]) { status.textContent = `Loading ${r.name}…`; await modelsReady; }
   useRoomEnvironment(r.id);
   lastKey = ''; cutaway(true);
+  hovered = null; tip.hidden = true;   // the tooltip re-reads what is under the pointer
   for (const hook of focusHooks) hook(focused);
 }
 function showFlat() {
@@ -824,6 +883,19 @@ function roomAt(px, py) {
   return zone.rooms.filter(q => inRing([px, py], q.outline)).sort((a, b) => ringArea(a.outline) - ringArea(b.outline))[0] || null;
 }
 
+// Clicking the door slides it open and takes you through: from Bedroom 3 to the balcony,
+// from anywhere else into Bedroom 3.
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const vis = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+  if (!ray.intersectObject(link, true).some(h => h.object.userData.door && vis(h.object))) return;
+  doorTarget = 1; wake();
+  const to = focused?.id === 'bed3' ? 'balcony' : 'bed3';
+  setTimeout(() => focusRoom(zone.rooms.find(q => q.id === to)), 450);
+});
 let t3clad = scene.children.find(o => o.userData.cladding) || null;
 
 // ------------------------------------------------------------------ post
@@ -863,12 +935,16 @@ renderer.domElement.addEventListener('pointermove', (e) => {
     for (const l of labels) l.el.classList.toggle('near', l.r === under);
   }
   const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
-  const hit = ray.intersectObjects([pieces, models], true).find(h => shown(h.object) && (h.object.userData.piece || h.object.userData.model));
+  // curtains and sheers never block the pointer: the door behind a sheer still answers
+  const hit = ray.intersectObjects([pieces, models, link], true).find(h => shown(h.object) && !h.object.userData.curtain && (h.object.userData.piece || h.object.userData.model || h.object.userData.door));
   const u = hit?.object.userData || {};
-  const key = u.piece || u.model || null;
+  const key = u.door ? 'door' : u.piece || u.model || null;
   if (key !== hovered) {
     hovered = key;
-    if (u.piece) {
+    if (u.door) {
+      tip.innerHTML = `<b>Sliding door</b><i>Click to go through to ${focused?.id === 'bed3' ? 'the balcony' : 'Bedroom 3'}</i>`;
+      tip.hidden = false;
+    } else if (u.piece) {
       const p = u.piece;
       tip.innerHTML = `<b>${p.name}</b>` + (p.movable && focused ? '<i>Drag to move · click for options</i>' : '');
       tip.hidden = false;
@@ -916,6 +992,14 @@ document.body.classList.add('ready');
 
 // what the configurator (configurator.js) builds on
 const frameHooks = [];
+// the Bedroom 3 door sliding open
+frameHooks.push(() => {
+  if (doorOpen === doorTarget) return false;
+  doorOpen += Math.sign(doorTarget - doorOpen) * Math.min(Math.abs(doorTarget - doorOpen), 0.06);
+  slider.position.z = sliderZ - doorOpen * (pw - 0.06);          // world -z is plan north
+  dirtyShadows();
+  return true;
+});
 export const api = {
   THREE, scene, camera, renderer, composer, controls, host, M, B, zone, W, CX, CY, CUT,
   inRing, inWall, prism, mesh, rbox, pieces, pieceGroups, placePiece, models, modelRoots,
