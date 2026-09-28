@@ -158,6 +158,10 @@ std('tambour',  { map: tambour({ base: 0x8A7F72 }), roughness: 0.4 });
 std('tlt3wall', { map: marble({ base: 0xD8C9B0, vein: 0x9C8465, tile: 1.2, veins: 7, seed: 44 }), roughness: 0.16 });
 std('terrazzo', { map: terrazzo({ base: 0xD9CDBA }), roughness: 0.3 });
 std('washer',   { color: 0xEDEDEA, roughness: 0.35 });
+// LG's Platinum Silver, brushed, on the dishwasher
+std('dishwasher', { color: 0xB8BABC, metalness: 0.75, roughness: 0.36 });
+// LG's Matte Black PCM: a dark, faintly metallic, satin sheet
+std('fridge',   { color: 0x2A2B2E, metalness: 0.45, roughness: 0.42, clearcoat: 0.08, clearcoatRoughness: 0.4 });
 // her Toilet 3 vanity: walnut by her spec, kept apart from the swappable woodwork
 std('t3walnut', { map: M.walnut.map, roughness: 0.5 });
 M.glass = new THREE.MeshPhysicalMaterial({ color: 0xdcebf0, roughness: 0.04, metalness: 0, transparent: true,
@@ -206,11 +210,25 @@ function backDir(o) {
   return [-n[0], -n[1]];
 }
 
+// ------------------------------------------------------------------ her bedrooms
+// The four bedrooms are Ar. Shivangi Kaushik's design, rebuilt in the flat's own
+// procedural style (bedrooms.js). Her finishes are the defaults; each room has its own
+// finish slots and movable furniture. Built before the shell, because each bedroom's
+// floor is cut out of the flat's floor.
+const bedrooms = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRing });
+const bedroomFloors = Object.values(bedrooms.floors);
+// the bedroom rings that sit wholly inside a floor polygon and clear of its own holes
+const floorCuts = (f) => bedroomFloors.filter(ring => ring.every(p => inRing(p, f.outer))
+  && !f.holes.some(h => h.some(p => inRing(p, ring)) || ring.some(p => inRing(p, h))));
+
 // ------------------------------------------------------------------ the shell
 // One builder for both views: the whole flat, and a single room on its own plinth.
 function buildShell(group, { plinth, floor, walls, glass }) {
-  group.add(prism(plinth, [], -0.42, -0.021, M.plinth));    // like a physical model on a base
-  for (const f of floor) group.add(prism(f.outer, f.holes, -0.024, -0.004, M.floor));
+  // like a physical model on a base (a merged space stands on each member's base)
+  for (const ring of Array.isArray(plinth[0][0]) ? plinth : [plinth]) group.add(prism(ring, [], -0.42, -0.021, M.plinth));
+  // Floors cast no shadow: laid a few mm above the floor, a tile inlay caught the
+  // floor's own shadow in patches that crawled with the sun.
+  for (const f of floor) { const m = prism(f.outer, [...f.holes, ...floorCuts(f)], -0.024, -0.004, M.floor); m.castShadow = false; group.add(m); }
   for (const w of walls) {
     const k = w.kind;
     let mat = M.walls, cap = M.section;
@@ -240,6 +258,8 @@ function buildShell(group, { plinth, floor, walls, glass }) {
 }
 const shell = buildShell(new THREE.Group(), { plinth: zone.zone, floor: zone.floor, walls: zone.walls, glass: zone.glass });
 scene.add(shell);
+// each bedroom's own wall paint, dropped by the cutaway like the walls behind it
+for (const g of Object.values(bedrooms.cladding)) scene.add(g);
 
 // ------------------------------------------------------------------ furniture
 const pieces = new THREE.Group(); scene.add(pieces);
@@ -262,7 +282,20 @@ const B = {
     g.add(prism(f, [], CT, CTOP, M.top));
     return g;
   },
-  dishwasher(p) { return B.counter(p, { front: M.steel }); },
+  dishwasher(p) {
+    // Her label: LG DFB532FP, 600 x 600 x 850 mm, freestanding, Platinum Silver
+    // (lg.com/in), under the worktop: a kickplate, a plain brushed door, and a control
+    // strip along its top with a pocket handle in the middle and a small display.
+    const o = p.obb, back = backDir(o), g = new THREE.Group();
+    g.add(prism(p.footprint, [], 0, CT, M.dishwasher, M.section));
+    g.add(prism(p.footprint, [], CT, CTOP, M.top));
+    const fr = frame(o, [-back[0], -back[1]]), w = Math.min(0.6, Math.max(o.w, o.d)), fz = Math.min(o.w, o.d) / 2;
+    const line = (y) => fr.add(mesh(new THREE.BoxGeometry(w - 0.01, 0.005, 0.004), M.darkglass, 0, y, fz + 0.001));
+    line(0.09); line(CT - 0.115);
+    fr.add(mesh(new THREE.BoxGeometry(0.18, 0.035, 0.006), M.darkglass, 0, CT - 0.14, fz + 0.002));
+    fr.add(mesh(new THREE.BoxGeometry(0.07, 0.022, 0.003), M.screen, 0.02, CT - 0.055, fz + 0.001));
+    g.add(fr); return g;
+  },
   unit(p) { return B.counter(p); },
   sink(p) {
     const o = p.obb, back = backDir(o), g = frame(o, [-back[0], -back[1]]);
@@ -302,12 +335,18 @@ const B = {
     return g;
   },
   fridge(p) {
+    // Her label: LG GL-B257HMC3, 650 L side-by-side, 913 x 735 x 1790 mm, Matte Black PCM
+    // (lg.com/in). Doors split about 43 / 57, a recessed pocket-handle band across both
+    // at about 0.8 m with a thin steel lip under it, small feet.
     const o = p.obb, back = backDir(o), g = new THREE.Group(), H = p.height || 1.79;
-    g.add(prism(p.footprint, [], 0, H, M.steel));
+    g.add(prism(p.footprint, [], 0.03, H, M.fridge));
     const fr = frame(o, [-back[0], -back[1]]);
-    const w = Math.max(o.w, o.d), d = Math.min(o.w, o.d);
-    fr.add(mesh(new THREE.BoxGeometry(0.006, H - 0.08, 0.004), M.darkglass, 0, H / 2, d / 2 + 0.002));   // the side-by-side split
-    for (const s of [-1, 1]) fr.add(mesh(new THREE.BoxGeometry(0.018, 0.9, 0.03), M.steel, s * 0.05, H * 0.55, d / 2 + 0.03));
+    const w = Math.max(o.w, o.d), d = Math.min(o.w, o.d), fz = d / 2, split = -w / 2 + 0.43 * w;
+    fr.add(mesh(new THREE.BoxGeometry(0.005, H - 0.05, 0.004), M.darkglass, split, 0.03 + (H - 0.03) / 2, fz + 0.001));
+    fr.add(mesh(new THREE.BoxGeometry(w - 0.006, 0.045, 0.004), M.darkglass, 0, 0.83, fz + 0.001));
+    for (const [x0, x1] of [[-w / 2 + 0.01, split - 0.006], [split + 0.006, w / 2 - 0.01]])
+      fr.add(mesh(new THREE.BoxGeometry(x1 - x0, 0.007, 0.006), M.steel, (x0 + x1) / 2, 0.8, fz + 0.003));
+    for (const sx of [-1, 1]) fr.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 12), M.darkglass, sx * (w / 2 - 0.06), 0.015, fz - 0.08));
     g.add(fr); return g;
   },
   sofa(p, seats = 4) {
@@ -459,8 +498,7 @@ if (t3) {
 const MOVABLE = new Set(['sofa', 'armchair', 'dining_chair', 'dining_table', 'coffee_table', 'bench', 'stool', 'side_table']);
 const pieceGroups = [];
 function placePiece(p) {
-  const build = B[p.type] || B.unit;
-  const g = build(p);
+  const g = p.build ? p.build(p) : (B[p.type] || B.unit)(p);
   g.traverse(o => { o.userData.piece = p; });
   const c = W(p.obb.cx, p.obb.cy), pivot = new THREE.Group(), inner = new THREE.Group();
   pivot.position.set(c.x, 0, c.z); inner.position.set(-c.x, 0, -c.z);
@@ -470,17 +508,17 @@ function placePiece(p) {
   pieces.add(pivot); pieceGroups.push(pivot);
   return pivot;
 }
+// the bedrooms' loose furniture joins her other rooms' pieces
+zone.pieces.push(...bedrooms.pieces);
 for (const p of zone.pieces) placePiece(p);
 
-// ------------------------------------------------------------------ her bedrooms
-// The four bedrooms are Ar. Shivangi Kaushik's design, rebuilt here in the flat's own
-// procedural style (bedrooms.js) instead of loading her SketchUp exports: same layout,
-// sizes, facing and finishes, drawn fresh. They stay locked to her finishes. Each room
-// is one root in `models`, so hover, the cutaway and the curtain button treat it as
-// one designed room, as they treated her models.
+// ------------------------------------------------------------------ bedroom fixtures
+// What stays put in each bedroom (floors, feature walls, wardrobes, desks, TVs,
+// curtains) is one root in `models`, so hover, the cutaway and the curtain button
+// treat it as one designed room.
 const models = new THREE.Group(); scene.add(models);
 const modelRoots = {};
-const { roots: bedroomRoots, curtainMode: CURTAIN_MODE } = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone });
+const { roots: bedroomRoots, curtainMode: CURTAIN_MODE } = bedrooms;
 const curtainMeshes = {}, curtainsOpen = new Set();
 function rememberCurtainBase(o) {
   if (o.userData.curtainBase) return;
@@ -498,35 +536,35 @@ function registerCurtains(root, rid) {
   setCurtainsOnRoot(root, rid, curtainsOpen.has(rid));
   queueMicrotask(() => window.dispatchEvent(new Event('b34-curtains-ready')));
 }
-function setCurtainsOnRoot(root, rid, open) {
+// At rest a room shows her dressing: drapes gathered at the sides over a sheer, the
+// Bedroom 2 roman blind half down. Drawn (the curtain button), the drapes close
+// across the glass and the blind rolls fully down, and they shade the sun.
+function setCurtainsOnRoot(root, rid, drawn) {
   if (!root) return;
   const mode = CURTAIN_MODE[rid];
   root.traverse(o => {
     if (o.userData.curtain !== rid) return;
     const role = o.userData.curtainRole || 'original';
-    if (role === 'proxy') {
-      // gathered drapes and a light sheer stand in for the curtains only while they
-      // are open; closed, her drapes show alone
-      if (o.isGroup) o.visible = open;
-      if (o.userData.curtainPart === 'sheer' && o.material) o.material.opacity = 0.16;
+    if (role === 'proxy') {                   // her dressing: gathered drapes and a sheer
+      if (o.isGroup) o.visible = !drawn;
       return;
     }
     const base = o.userData.curtainBase;
     if (!base) return;
-    o.visible = true;
     o.position.copy(base.position); o.scale.copy(base.scale);
-    if (!open) return;
-    if (mode === 'side') { o.visible = false; return; }
-    if (mode === 'roman') {
-      o.scale.y = base.scale.y * 0.20;
-      o.position.y = base.position.y + base.height * 0.40;
+    if (mode === 'side') { o.visible = drawn; return; }
+    o.visible = true;
+    if (mode === 'roman' && drawn && o.userData.fullDrop) {
+      const full = o.userData.fullDrop;       // top stays put, the hem drops to the sill
+      o.scale.y = base.scale.y * full / base.height;
+      o.position.y = base.position.y + base.height / 2 - full / 2;
     }
   });
 }
-function setCurtainsOpen(rid, open) {
+function setCurtainsOpen(rid, drawn) {
   if (!CURTAIN_MODE[rid]) return;
-  if (open) curtainsOpen.add(rid); else curtainsOpen.delete(rid);
-  for (const root of [modelRoots[rid], lowCopies[rid]]) setCurtainsOnRoot(root, rid, open);
+  if (drawn) curtainsOpen.add(rid); else curtainsOpen.delete(rid);
+  for (const root of [modelRoots[rid], lowCopies[rid]]) setCurtainsOnRoot(root, rid, drawn);
   dirtyShadows();
 }
 const hasCurtains = rid => !!curtainMeshes[rid]?.length;
@@ -581,7 +619,8 @@ function cutaway(force) {
   const low = [];
   cands.forEach((m, i) => {
     const info = m.userData.wall || m.userData.glass;
-    if (info && !inRing([info.cx + px * reach, info.cy + py * reach], ring)) low.push(i);
+    const q = [info?.cx + px * reach, info?.cy + py * reach];
+    if (info && !(focused?.rings ? focused.rings.some(rr => inRing(q, rr)) : inRing(q, ring))) low.push(i);
   });
   const side = focused ? `${Math.sign(Math.round(px * 2.5))}${Math.sign(Math.round(py * 2.5))}` : '';
   const key = (focused ? focused.id : '*') + side + low.join(',');
@@ -684,13 +723,29 @@ function flyTo(ring, fromPlan) {
 const titleK = document.getElementById('t-k'), titleH = document.getElementById('t-h'), credit = document.getElementById('credit');
 const back = document.getElementById('back');
 // rooms that open into each other (foyer, living, dining) focus as one space
+// The washing machines stand in the balcony's utility end, which the drawing splits
+// off as its own room: it opens and reads as part of the balcony.
+{
+  const bal = zone.rooms.find(r => r.id === 'balcony'), ut = zone.rooms.find(r => r.id === 'wiw');
+  if (bal && ut) {
+    const seen = new Set(), uniq = (list) => list.filter(w => { const k = JSON.stringify(w.outer || w.path); if (seen.has(k)) return false; seen.add(k); return true; });
+    ut.name = 'Balcony';
+    zone.spaces = [...(zone.spaces || []), {
+      id: 'balcony-all', name: 'Balcony', members: ['balcony', 'wiw'], rings: [bal.outline, ut.outline],
+      outline: bal.outline, plinths: [bal.island, ut.island], island: [...bal.island, ...ut.island],
+      floor: [...bal.floor, ...ut.floor], walls: uniq([...bal.walls, ...ut.walls]), glass: uniq([...bal.glass, ...ut.glass]),
+      view_from: bal.view_from,
+    }];
+    bal.space = ut.space = 'balcony-all';
+  }
+}
 const spaces = Object.fromEntries((zone.spaces || []).map(s => [s.id, s]));
 async function focusRoom(r) {
   if (!r) return;
   if (r.space) r = spaces[r.space];
   focused = r;
   const members = r.members || [r.id];
-  if (!focusCache[r.id]) focusCache[r.id] = buildShell(new THREE.Group(), { plinth: r.island, floor: r.floor, walls: r.walls, glass: r.glass });
+  if (!focusCache[r.id]) focusCache[r.id] = buildShell(new THREE.Group(), { plinth: r.plinths || r.island, floor: r.floor, walls: r.walls, glass: r.glass });
   focusGroup = focusCache[r.id];
   if (!focusGroup.parent) scene.add(focusGroup);
   for (const g of Object.values(focusCache)) g.visible = g === focusGroup;
@@ -731,7 +786,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && focused) showFlat()
 const labelHost = document.getElementById('labels');
 // Fewer names at once: the small rooms show theirs only while the pointer is over them.
 const MINOR = new Set(['tlt1', 'tlt2', 'tlt3', 'tlt4', 'store', 'wiw', 'lobby', 'entrance']);
-const labels = zone.rooms.map(r => {
+const labels = zone.rooms.filter(r => r.id !== 'wiw').map(r => {
   const el = document.createElement('button');
   el.className = 'room' + (r.model ? ' designed' : '') + (MINOR.has(r.id) ? ' minor' : '');
   el.textContent = r.name;
@@ -866,6 +921,7 @@ export const api = {
   inRing, inWall, prism, mesh, rbox, pieces, pieceGroups, placePiece, models, modelRoots,
   sun, hemi, fill, placeSun, dirtyShadows, wake, lightHooks, frameHooks, tip, spaces, safe,
   focusHooks, setCurtainsOpen, hasCurtains, curtainRooms,
+  bedroomSlots: bedrooms.slots, obstacles: bedrooms.obstacles,
   fitView, focusRoom, showFlat, activeShell, recut: () => { lastKey = ''; cutaway(true); }, resetView: () => (focused ? focusRoom(focused) : showFlat()),
   get focused() { return focused; }, get studioOn() { return studioOn; },
 };

@@ -6,7 +6,8 @@
 //
 // What this layer changes is the viewer's play, never Ar. Shivangi Kaushik's design:
 // every finish is a concept option, every moved piece is marked as moved from her
-// layout and can be put back, and her four bedrooms and Toilet 3 cannot be touched.
+// layout and can be put back. Her four bedrooms open with her own finishes and can be
+// changed room by room; Toilet 3 stays as she specified it.
 import { api } from './diorama.js';
 import { createProducts } from './products.js';
 import { marble, wood, fabric, shutter, paint, terrazzo, boucle, velvet, leather, limewash, travertine,
@@ -52,6 +53,20 @@ const SAMPLES = [
   { id: 'taupe',     cat: 'paint',  name: 'Taupe',            c: 0x8A7F72, L: .48, warm: .2,  soft: .3 },
   { id: 'forest',    cat: 'paint',  name: 'Deep green',       c: 0x33443A, L: .2,  warm: -.2, soft: .35 },
   { id: 'charcoal',  cat: 'paint',  name: 'Charcoal',         c: 0x3A3937, L: .17, warm: -.1, soft: .3 },
+  // the finishes of her four bedrooms, read off her renders: each room opens with these
+  { id: 'beigemarble', cat: 'stone', name: 'Beige marble',    c: 0xE4D6C6, vein: 0xB39A7E, L: .82, warm: .4, soft: .1, tile: 0.8 },
+  { id: 'dovemarble', cat: 'stone', name: 'Dove grey marble', c: 0xDCD9D4, vein: 0xA7A29B, L: .84, warm: -.05, soft: .1, tile: 0.8 },
+  { id: 'darkoak',   cat: 'wood',   name: 'Dark oak',         c: 0x5E4A3A, dark: 0x2A1F17, L: .26, warm: .35, soft: .45 },
+  { id: 'dove',      cat: 'fabric', name: 'Dove grey linen',  c: 0xBAB6AF, L: .7,  warm: 0,   soft: .75 },
+  { id: 'stone',     cat: 'fabric', name: 'Stone linen',      c: 0xD6CDBF, L: .8,  warm: .25, soft: .75 },
+  { id: 'blush',     cat: 'fabric', name: 'Blush bouclé',     c: 0xC9A897, kind: 'boucle', L: .64, warm: .6, soft: 1 },
+  { id: 'navy',      cat: 'fabric', name: 'Navy linen',       c: 0x2F3743, L: .16, warm: -.6, soft: .75 },
+  { id: 'rosewash',  cat: 'fabric', name: 'Rose rug',         c: 0xCDBDB2, vein: 0x9A8274, kind: 'marbled', rug: true, L: .72, warm: .45, soft: .8 },
+  { id: 'swirl',     cat: 'fabric', name: 'Grey swirl rug',   c: 0xD9D6D1, vein: 0x7C7873, kind: 'marbled', rug: true, L: .8, warm: 0, soft: .8 },
+  { id: 'agate',     cat: 'fabric', name: 'Agate rug',        c: 0xE7DCCB, vein: 0x6E4A2C, kind: 'marbled', rug: true, L: .74, warm: .5, soft: .8 },
+  { id: 'linen',     cat: 'paint',  name: 'Linen white',      c: 0xE4DED3, L: .87, warm: .25, soft: .3 },
+  { id: 'pebble',    cat: 'paint',  name: 'Pebble grey',      c: 0xB8B3AC, L: .68, warm: 0,   soft: .3 },
+  { id: 'greige',    cat: 'paint',  name: 'Greige',           c: 0xB9AD9D, L: .66, warm: .3,  soft: .3 },
 ];
 const SAMPLE = Object.fromEntries(SAMPLES.map(s => [s.id, s]));
 const CATS = [['wood', 'Wood'], ['stone', 'Stone'], ['fabric', 'Fabric'], ['paint', 'Paint']];
@@ -71,18 +86,41 @@ const SLOTS = {
 };
 const DEFAULTS = { floor: 'botticino', walls: 'warmwhite', joinery: 'taupe', worktop: 'bianco', upholstery: 'oat',
                    accent: 'rust', woodwork: 'walnut', doors: 'oak', rug: 'grey' };
+// Each bedroom has its own slots, keyed '<room>.<surface>', on its own materials and
+// starting from her finishes. In a bedroom, the tray, presets and meter work on that
+// room; in the whole-flat view, on the flat's shared surfaces.
+const ROOM_SLOT = {
+  floor:      { name: 'Floor', thing: 'floor', cats: ['wood', 'stone'] },
+  walls:      { name: 'Walls', thing: 'walls', cats: ['paint', 'stone'] },
+  feature:    { name: 'Feature wall', thing: 'feature wall', cats: ['paint', 'wood', 'stone'] },
+  upholstery: { name: 'Upholstery', thing: 'bed and chairs', cats: ['fabric'] },
+  accent:     { name: 'Accents', thing: 'cushions and accents', cats: ['fabric'] },
+  joinery:    { name: 'Wardrobe fronts', thing: 'wardrobe', cats: ['paint', 'wood'] },
+  woodwork:   { name: 'Woodwork', thing: 'woodwork', cats: ['wood'] },
+  rug:        { name: 'Rug', thing: 'rug', cats: ['fabric'] },
+};
+for (const d of api.bedroomSlots) {
+  const k = `${d.rid}.${d.base}`, t = ROOM_SLOT[d.base], room = zone.rooms.find(r => r.id === d.rid).name;
+  SLOTS[k] = { name: t.name, the: `the ${room} ${t.thing}`, cats: t.cats, mat: d.mat, room: d.rid };
+  DEFAULTS[k] = d.def;
+}
+const baseOf = (slot) => slot.split('.').pop();
+// a flat-wide surface key, read in the room on screen when that room has its own
+const scoped = (k) => { const f = api.focused, rk = f && `${f.id}.${k}`; return rk && SLOTS[rk] ? rk : k; };
+const inScope = () => { const f = api.focused; return Object.keys(SLOTS).filter(k => f && SLOTS[`${f.id}.floor`] ? SLOTS[k].room === f.id : !SLOTS[k].room); };
 const FIRST_SLOT = { wood: 'floor', stone: 'floor', paint: 'walls', fabric: 'upholstery' };
 /* Client-facing floor and wall choices stay within the quiet material language of
    the project. The larger library remains available for joinery, worktops and soft
    furnishings, but saturated green, blue, yellow and novelty dark floors are not
    offered for the two largest surfaces. */
 const CURATED_SURFACES = {
-  floor: new Set(['teak', 'walnut', 'oak', 'ash', 'smoked',
-                  'botticino', 'bianco', 'statuario', 'travertine', 'terrazzo']),
-  walls: new Set(['warmwhite', 'chalk', 'sand', 'taupe',
+  floor: new Set(['teak', 'walnut', 'oak', 'ash', 'smoked', 'darkoak',
+                  'botticino', 'bianco', 'statuario', 'travertine', 'terrazzo', 'beigemarble', 'dovemarble']),
+  walls: new Set(['warmwhite', 'chalk', 'sand', 'taupe', 'linen', 'pebble', 'greige',
                   'botticino', 'bianco', 'travertine'])
 };
-const allowedOn = (slot, id) => !CURATED_SURFACES[slot] || CURATED_SURFACES[slot].has(id);
+// rug patterns go only on rugs
+const allowedOn = (slot, id) => { const b = baseOf(slot); return (!CURATED_SURFACES[b] || CURATED_SURFACES[b].has(id)) && (!SAMPLE[id]?.rug || b === 'rug'); };
 const MAT2SLOT = new Map(Object.entries(SLOTS).map(([k, s]) => [M[s.mat], k]));
 const LOCKED = new Set([M.tlt3wall, M.t3walnut, M.terrazzo]);
 
@@ -91,8 +129,8 @@ const LOCKED = new Set([M.tlt3wall, M.t3walnut, M.terrazzo]);
 // fabrics get sheen, polished stone and lacquer a clearcoat. Pattern and scale follow
 // the surface: wood on a floor is laid planks, on a table it is long grain.
 const texCache = new Map();
-function finishFor(s, slot) {
-  const key = s.id + ':' + slot;
+function finishFor(s, room_slot) {
+  const slot = baseOf(room_slot), key = s.id + ':' + slot;
   if (texCache.has(key)) return texCache.get(key);
   const seed = [...s.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) & 0xffff;
   let map, rough = 0.6, cc = 0, ccr = 0.2, sheen = 0, sheenR = 0.6, ns = 0.4, str = 2;
@@ -112,12 +150,15 @@ function finishFor(s, slot) {
   } else if (s.cat === 'fabric') {
     const k = s.kind || 'weave';
     map = k === 'boucle' ? boucle({ base: s.c, seed }) : k === 'velvet' ? velvet({ base: s.c, seed })
-        : k === 'leather' ? leather({ base: s.c, seed }) : fabric({ base: s.c, seed });
+        : k === 'leather' ? leather({ base: s.c, seed })
+        : k === 'marbled' ? marble({ base: s.c, vein: s.vein, joint: false, veins: 12, tile: 1.2, seed })
+        : fabric({ base: s.c, seed });
     rough = k === 'leather' ? 0.5 : 0.92;
     sheen = k === 'velvet' ? 1 : k === 'leather' ? 0 : 0.45; sheenR = k === 'velvet' ? 0.35 : 0.7;
     cc = k === 'leather' ? 0.2 : 0; ns = k === 'velvet' ? 0.3 : 0.9; str = k === 'boucle' ? 5 : 3.5;
   } else {
     if (slot === 'joinery') { map = shutter({ base: s.c, seed }); rough = 0.36; cc = 0.25; ns = 0.5; str = 3; }
+    else if (slot === 'feature') { map = paint({ base: s.c, seed }); rough = 0.8; ns = 0.3; str = 3; }
     else if (s.kind === 'limewash') { map = limewash({ base: s.c, seed }); rough = 0.95; ns = 0.5; str = 3; }
     else { map = paint({ base: s.c, seed }); rough = slot === 'doors' ? 0.55 : 0.9; ns = 0.3; str = 3; }
   }
@@ -214,7 +255,7 @@ const PR = createProducts(api);
 // overlap in her drawing (the nesting tables, chairs tucked under the table) may keep
 // doing so. Moves snap to 10 cm from where the piece started, so a piece she lined up
 // with a wall stays lined up; turns go in 15 degree steps.
-const OPEN = zone.rooms.filter(r => !r.designed);
+const OPEN = zone.rooms.filter(r => !r.designed || r.model);
 const area = (ring) => Math.abs(ring.reduce((a, [x, y], i) => { const [x2, y2] = ring[(i + 1) % ring.length]; return a + x * y2 - x2 * y; }, 0) / 2);
 function roomAt(x, y) { return zone.rooms.filter(r => inRing([x, y], r.outline)).sort((a, b) => area(a.outline) - area(b.outline))[0] || null; }
 function corners(q, w, d, shrink = 0) {
@@ -243,10 +284,16 @@ for (let i = 0; i < zone.pieces.length; i++) for (let j = i + 1; j < zone.pieces
   const a = zone.pieces[i], b = zone.pieces[j];
   if (overlap(corners(a.obb, a.obb.w, a.obb.d, 0.02), corners(b.obb, b.obb.w, b.obb.d, 0.02))) allowed.add(pairKey(a, b));
 }
+// the bedrooms' fixed joinery (wardrobes, desks, wall-hung tables), and which pieces
+// already overlap it in her layout (a chair tucked under a desk)
+const fixedBoxes = api.obstacles.map(o => corners(o, o.w, o.d, 0.02));
+const fixedOk = new Set();
+for (const p of zone.pieces) fixedBoxes.forEach((b, i) => { if (overlap(corners(p.obb, p.obb.w, p.obb.d, 0.02), b)) fixedOk.add(p.id + '|' + i); });
 function fits(p, q) {
   if (!samples(q, p.obb.w, p.obb.d, 0.05).every(pt => OPEN.some(r => inRing(pt, r.outline)) && !inWall(pt))) return false;
   if (p.type === 'rug') return true;
   const mine = corners(q, p.obb.w, p.obb.d, 0.02);
+  if (fixedBoxes.some((b, i) => !fixedOk.has(p.id + '|' + i) && overlap(mine, b))) return false;
   for (const g of pieceGroups) {
     const o = g.userData.piece;
     if (o === p || g.userData.removed || o.type === 'rug' || allowed.has(pairKey(p, o))) continue;
@@ -335,7 +382,8 @@ function relight() {
   api.dirtyShadows();
 }
 api.lightHooks.relight = relight;
-const clock = (t) => { const h = Math.floor(t), m = Math.round((t - h) * 60); return `${String(h + (m === 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+// times run 6:00 to 30:00 (6 am the next morning); the clock reads them round the dial
+const clock = (t) => { const m = ((Math.round(t * 60) % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 const TIMES = [['Morning', 7.5, 'sunrise'], ['Midday', 12.35, 'sun'], ['Evening', 17.6, 'lamp'], ['Night', 21, 'moon']];
 
 // ------------------------------------------------------------------ mood
@@ -351,7 +399,7 @@ const PRESETS = [
 const WEIGHT = { floor: 0.3, walls: 0.34, joinery: 0.08, worktop: 0.04, upholstery: 0.12, accent: 0.04, woodwork: 0.08 };
 function meter() {
   let L = 0, warm = 0, soft = 0;
-  for (const [k, w] of Object.entries(WEIGHT)) { const s = SAMPLE[state.f[k]]; L += s.L * w; warm += s.warm * w; soft += s.soft * w; }
+  for (const [k, w] of Object.entries(WEIGHT)) { const s = SAMPLE[state.f[scoped(k)]]; L += s.L * w; warm += s.warm * w; soft += s.soft * w; }
   const { el } = sunAt(state.t);
   const high = smooth(10, 50, el), golden = el > -2 ? Math.exp(-((el - 8) ** 2) / 110) : 0, dark = 1 - smooth(-5, 6, el);
   const bright = L * 0.75 + high * 0.55;
@@ -363,7 +411,7 @@ function meter() {
   return pct;
 }
 function reading(pct) {
-  const { el } = sunAt(state.t), n = (k) => SAMPLE[state.f[k]].name;
+  const { el } = sunAt(state.t), n = (k) => SAMPLE[state.f[scoped(k)]].name;
   const light = el < -2 ? 'lamplight after dark' : el < 14 ? 'a low gold sun' : el > 48 ? 'the high midday sun' : 'soft sun from the side';
   const mood = ['cozy', 'bright', 'moody'][pct.indexOf(Math.max(...pct))];
   return `<b>${n('walls')} walls</b>, a <b>${n('floor').toLowerCase()} floor</b> and ${light}. It reads <em class="${mood}">${mood}</em>.`;
@@ -473,7 +521,6 @@ function pickSurface(e) {
   const objs = [api.activeShell(), pieces, api.models, ...scene.children.filter(o => o.userData.cladding)];
   const h = ray.intersectObjects(objs, true).find(h => h.object.isMesh && h.face && shown(h.object));
   if (!h) return null;
-  if (h.object.userData.model) return { locked: `Finishes in ${h.object.userData.model.name} are fixed` };
   const mat = Array.isArray(h.object.material) ? h.object.material[h.face.materialIndex] : h.object.material;
   if (LOCKED.has(mat)) return { locked: 'Finishes in Toilet 3 are fixed' };
   return { slot: MAT2SLOT.get(mat) || null, pivot: pivotOf(h.object), point: h.point };
@@ -630,9 +677,9 @@ ui.innerHTML = `
   <section class="panel daylight">
     <header><small>Daylight</small><b class="clock"></b></header>
     <div class="times">${TIMES.map(([n, t, ic]) => `<button data-time="${t}">${icon(ic)}<span><b>${n}</b><small>${clock(t)}</small></span></button>`).join('')}</div>
-    <input type="range" min="6" max="22" step="0.05" aria-label="Time of day">
-    <button class="curtain-toggle" hidden>${icon('curtains')}<span><b>Open curtains</b><small>More daylight</small></span></button>
-    <p class="fine">Sun path for Delhi, approximate. Drag the sun along its arc.</p>
+    <input type="range" min="6" max="30" step="0.05" aria-label="Time of day, 6 am to 6 am">
+    <button class="curtain-toggle" hidden>${icon('curtains')}<span><b>Draw the curtains</b><small>Close them across the windows</small></span></button>
+    <p class="fine">Sun by day, moon by night, 6 am to 6 am, for Delhi, approximate. Drag it along its path.</p>
   </section>
   <section class="panel dock">
     <div class="tabs">${CATS.map(([k, n]) => `<button data-cat="${k}">${n}</button>`).join('')}<span class="sep"></span><button data-cat="furniture">Furniture</button><button data-cat="products">Products</button>
@@ -647,9 +694,9 @@ ui.innerHTML = `
     <h2>Play with the flat</h2>
     <p>Try finishes, move the furniture and watch the light change through the day. Nothing here is permanent: undo, or reset the furniture, at any time.</p>
     <h3>Finishes</h3>
-    <p>Drag a sample from the tray onto a surface and it previews in place; let go to keep it. Or open a room, click a surface, then click a sample. Wood goes on floors, woodwork, fronts and doors; stone on floors, walls and worktops; paint on walls, fronts and doors; fabric on upholstery, cushions and rugs.</p>
+    <p>Drag a sample from the tray onto a surface and it previews in place; let go to keep it. Or open a room, click a surface, then click a sample. Wood goes on floors, woodwork, fronts and doors; stone on floors, walls and worktops; paint on walls, fronts and doors; fabric on upholstery, cushions and rugs. Each bedroom opens with Ar. Shivangi Kaushik's own finishes and changes on its own; Original puts hers back.</p>
     <h3>Furniture</h3>
-    <p>Drag any loose piece to move it. It snaps in 10 cm steps and will not go into a wall, another piece or the bedrooms. Scroll while dragging to turn it. Click a piece for Turn, Put back and Take out. The Furniture tab adds pieces: click one to drop it in view, or drag it into a room. Kitchen units, wardrobes and bathroom fittings are fixed.</p>
+    <p>Drag any loose piece to move it. It snaps in 10 cm steps and will not go into a wall, another piece or fitted joinery. Scroll while dragging to turn it. Click a piece for Turn, Put back and Take out. The Furniture tab adds pieces: click one to drop it in view, or drag it into a room. Kitchen units, wardrobes and bathroom fittings are fixed.</p>
     <h3>Light</h3>
     <p>The sun follows its path over Delhi through the day. Move the slider or pick a time. After dark the flat gets a warm evening light, and any floor lamp you added switches on.</p>
     <h3>Mood</h3>
@@ -689,7 +736,7 @@ function renderTray() {
     }
     return;
   }
-  const destination = sel?.slot || FIRST_SLOT[tab];
+  const destination = sel?.slot || scoped(FIRST_SLOT[tab]);
   const list = SAMPLES.filter(s => s.cat === tab && allowedOn(destination, s.id));
   list.forEach((s, i) => {
     const b = document.createElement('button');
@@ -747,7 +794,7 @@ function wireSample(b, s) {
   const end = () => {
     if (!d) return;
     const dd = d; d = null; dd.ghost?.remove(); highlight(sel?.slot || null);
-    if (!dd.moved) return applySample(s.id, sel?.slot && SLOTS[sel.slot].cats.includes(s.cat) ? sel.slot : FIRST_SLOT[s.cat]);
+    if (!dd.moved) return applySample(s.id, sel?.slot && SLOTS[sel.slot].cats.includes(s.cat) ? sel.slot : scoped(FIRST_SLOT[s.cat]));
     if (dd.slot) {
       if (dd.patch) releaseSpread(dd.patch);
       commit(); toast(`${s.name} on ${SLOTS[dd.slot].the}`);
@@ -820,9 +867,14 @@ card.querySelector('[data-c="out"]').onclick = () => sel?.pivot && takeOut(sel.p
 
 // presets, daylight, tools
 ui.querySelectorAll('.preset').forEach(b => b.onclick = () => applyPreset(PRESETS.find(p => p.id === b.dataset.p)));
+// the finish a preset gives a slot: 'Original' is her design, room by room
+const presetFor = (p, k) => p.id === 'original' ? DEFAULTS[k] : p.f[baseOf(k)] ?? state.f[k];
 function applyPreset(p) {
   const c = controls.target.clone().setY(0);
-  for (const k in SLOTS) { const id = p.f[k] || DEFAULTS[k]; if (state.f[k] !== id) applyFinish(k, id, c); }
+  for (const k of inScope()) {
+    const id = presetFor(p, k);
+    if (id && state.f[k] !== id && SLOTS[k].cats.includes(SAMPLE[id].cat) && allowedOn(k, id)) applyFinish(k, id, c);
+  }
   refresh(); animateTime(p.t);
 }
 const range = $('.daylight input', ui);
@@ -837,8 +889,9 @@ function refreshCurtains() {
   if (!rooms.length) return;
   const open = rooms.every(id => !!state.c[id]);
   curtainBtn.setAttribute('aria-pressed', String(open));
-  $('b', curtainBtn).textContent = open ? (rid ? 'Restore curtains' : 'Restore all curtains') : (rid ? 'Open curtains' : 'Open all curtains');
-  $('small', curtainBtn).textContent = open ? 'Show the designed dressing' : 'Let in more daylight';
+  // state.c[room] true = curtains drawn across (and Bedroom 2's blind fully down)
+  $('b', curtainBtn).textContent = open ? (rid ? 'Open the curtains' : 'Open all curtains') : (rid ? 'Draw the curtains' : 'Draw all curtains');
+  $('small', curtainBtn).textContent = open ? 'Back to the designed dressing' : 'Close them across the windows';
   curtainBtn.classList.toggle('on', open);
 }
 curtainBtn.onclick = () => {
@@ -848,7 +901,7 @@ curtainBtn.onclick = () => {
   const open = !rooms.every(id => !!state.c[id]);
   for (const id of rooms) { state.c[id] = open; api.setCurtainsOpen(id, open); }
   refreshCurtains(); commit();
-  toast(open ? (rid ? 'Curtains opened for this room' : 'Curtains opened across the flat') : (rid ? 'Curtains restored' : 'Curtains restored across the flat'));
+  toast(open ? (rid ? 'Curtains drawn' : 'Curtains drawn across the flat') : (rid ? 'Curtains open' : 'Curtains open across the flat'));
 };
 api.focusHooks.push(refreshCurtains);
 addEventListener('b34-curtains-ready', refreshCurtains);
@@ -885,7 +938,7 @@ addEventListener('keydown', (e) => {
   if (k === 'Escape' && sel) { e.stopImmediatePropagation(); deselect(); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (k >= '1' && k <= '4') applyPreset(PRESETS[+k - 1]);
-  else if (k === '[' || k === ']') animateTime(Math.min(22, Math.max(6, (timeAnim?.to ?? state.t) + (k === ']' ? 0.5 : -0.5))), 450);
+  else if (k === '[' || k === ']') animateTime(Math.min(30, Math.max(6, (timeAnim?.to ?? state.t) + (k === ']' ? 0.5 : -0.5))), 450);
   else if (k === 'n' || k === 'N') TOOL.board();
   else if ((k === ',' || k === '.') && sel?.pivot) turn(sel.pivot, k === '.' ? 15 : -15);
   else if ((k === 'Delete' || k === 'Backspace') && sel?.pivot) takeOut(sel.pivot);
@@ -913,7 +966,7 @@ function refresh() {
   });
   for (const b of ui.querySelectorAll('.preset')) {
     const p = PRESETS.find(q => q.id === b.dataset.p);
-    b.classList.toggle('on', Object.keys(SLOTS).every(k => state.f[k] === p.f[k]) && Math.abs(state.t - p.t) < 0.3);
+    b.classList.toggle('on', inScope().every(k => { const id = presetFor(p, k); return state.f[k] === id || !SLOTS[k].cats.includes(SAMPLE[id]?.cat) || !allowedOn(k, id); }) && Math.abs(state.t - p.t) < 0.3);
   }
   $('.clock', ui).textContent = clock(state.t);
   range.value = state.t;
@@ -1017,10 +1070,11 @@ api.frameHooks.push(() => {
 });
 
 // ------------------------------------------------------------------ the sun's arc
-// The day's path of the sun drawn over the model, rising and setting where it really
-// does for Delhi. The sun (or after dark the moon, which rides the same path twelve
-// hours behind at this season) sits on it and can be dragged along it.
-const SVGNS = 'http://www.w3.org/2000/svg', RISE = NOON - 6, SET = NOON + 6;
+// A whole day read left to right, 6 am to 6 am: the sun's arch from sunrise to sunset
+// on the left, the moon's (it rides the same path twelve hours behind at this season)
+// from sunset to the next sunrise on the right. The orb sits on it and can be dragged.
+// The light itself always comes from the true direction for Delhi.
+const SVGNS = 'http://www.w3.org/2000/svg', RISE = NOON - 6, SET = NOON + 6, DAY_END = 30;
 const sky = document.createElementNS(SVGNS, 'svg');
 sky.setAttribute('class', 'sky');
 sky.innerHTML = '<g class="links"></g><path class="arc"/><g class="ticks"></g>'
@@ -1032,9 +1086,7 @@ const ringStats = (ring) => {
   return { c: W(x, y), R: Math.max(...ring.map(([a, b]) => Math.hypot(a - x, b - y))) };
 };
 // Seen from this camera the sun's true path runs nearly edge-on (it would draw as a
-// line through the flat), so the arc is drawn as an arch over the model on screen.
-// Sunrise sits on the side where east actually is in the current view; the light
-// itself always comes from the true direction.
+// line through the flat), so the day is drawn as two arches over the model on screen.
 function toScreen(v) {
   const q = v.clone().project(camera), r = el.getBoundingClientRect();
   return [r.left + (q.x * 0.5 + 0.5) * r.width, r.top + (-q.y * 0.5 + 0.5) * r.height];
@@ -1046,20 +1098,22 @@ function skyArc() {
     const [x, y] = toScreen(W(a, b).setY(h));
     x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
   }
-  const [ex] = toScreen(c.clone().add(new V3(...(([px, py]) => [px, 0, -py])(planDir(Math.PI / 2))).multiplyScalar(R)));
-  const [wx] = toScreen(c.clone().add(new V3(...(([px, py]) => [px, 0, -py])(planDir(-Math.PI / 2))).multiplyScalar(R)));
   const top = Math.max(140, y0 - 36), base = y0 + (y1 - y0) * 0.42;
-  return { cx: (x0 + x1) / 2, cy: base, rx: (x1 - x0) * 0.56, ry: Math.max(60, base - top), eastRight: ex > wx };
+  return { cx: (x0 + x1) / 2, cy: base, rx: (x1 - x0) * 0.56, ry: Math.max(60, base - top) };
 }
-function arcAt(t, A) {                       // screen point for a time between sunrise and sunset
-  const u = Math.min(1, Math.max(0, (t - RISE) / (SET - RISE))), a = Math.PI * (A.eastRight ? u : 1 - u);
-  return [A.cx + Math.cos(a) * A.rx, A.cy - Math.sin(a) * A.ry];
+// a time on the day's track: before sunrise counts as the end of the night
+const onTrack = (t) => (t < RISE ? t + 24 : t);
+const isDay = (t) => { const tt = onTrack(t); return tt >= RISE && tt <= SET; };
+function arcAt(t, A) {                       // screen point for any time, 6 am to 6 am
+  const tt = Math.min(RISE + 24, Math.max(RISE, onTrack(t))), half = A.rx / 2, day = tt <= SET;
+  const u = (tt - (day ? RISE : SET)) / 12, cx = A.cx + (day ? -half : half);
+  return [cx - Math.cos(Math.PI * u) * half, A.cy - Math.sin(Math.PI * u) * A.ry * (day ? 1 : 0.72)];
 }
 let sunDrag = null;
 orb.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation();
   try { orb.setPointerCapture(e.pointerId); } catch {}
-  sunDrag = { moon: state.t > SET }; timeAnim = null;
+  sunDrag = {}; timeAnim = null;
   document.body.classList.add('sun-live');
 });
 // the arc is only drawn while the sun is in hand (or the pointer rests on it)
@@ -1069,11 +1123,11 @@ orb.addEventListener('pointermove', (e) => {
   if (!sunDrag) return;
   const A = skyArc();
   let best = RISE, bd = Infinity;
-  for (let t = RISE; t <= SET; t += 0.05) {
+  for (let t = RISE; t <= RISE + 24; t += 0.05) {
     const [x, y] = arcAt(t, A), d = Math.hypot(x - e.clientX, y - e.clientY);
     if (d < bd) { bd = d; best = t; }
   }
-  state.t = sunDrag.moon ? Math.min(22, Math.max(SET, best + 12)) : best;
+  state.t = Math.min(DAY_END, best);
   relight(); refresh();
 });
 const endSunDrag = () => { if (sunDrag) { sunDrag = null; document.body.classList.remove('sun-live'); commit(); } };
@@ -1127,8 +1181,9 @@ function refreshBoard() {
   anchorKey = '';                    // re-lay on the next frame
 }
 api.focusHooks.push((f) => {
-  document.body.classList.toggle('locked-room', !!(f && !f.members && f.model));
   anchorAz = null; anchorKey = '';
+  // entering or leaving a bedroom changes which surfaces the tray, presets and meter mean
+  if (sel?.slot) deselect(); else if (tab !== 'products' && tab !== 'furniture') renderTray(); else refresh();
 });
 function layoutOverlay() {
   const rect = el.getBoundingClientRect();
@@ -1139,15 +1194,15 @@ function layoutOverlay() {
   sky.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`);
   // the arc and its hour marks
   const A = skyArc(), pts = [];
-  for (let t = RISE; t <= SET + 1e-6; t += 0.1) pts.push(arcAt(t, A));
+  for (let t = RISE; t <= RISE + 24 + 1e-6; t += 0.1) pts.push(arcAt(t, A));
   sky.querySelector('.arc').setAttribute('d', 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L'));
-  const [rx, ry] = arcAt(RISE, A), [sx, sy] = arcAt(SET, A);
-  sky.querySelector('.ticks').innerHTML = [8, 10, 12, 14, 16].map(h => { const [x, y] = arcAt(h + NOON - 12, A); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2"/>`; }).join('')
-    + `<text x="${rx.toFixed(1)}" y="${(ry + 16).toFixed(1)}">${clock(RISE)}</text><text x="${sx.toFixed(1)}" y="${(sy + 16).toFixed(1)}">${clock(SET)}</text>`;
-  const day = state.t >= RISE && state.t <= SET, moonT = state.t - 12, night = moonT >= RISE && moonT <= SET;
-  orb.style.display = day || night ? '' : 'none';
-  orb.classList.toggle('moon', !day);
-  if (day || night) { const [x, y] = arcAt(day ? state.t : moonT, A); orb.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`); }
+  // hour marks every three hours, and the three turning points labelled
+  const marks = [9, 12, 15, 21, 24, 27].map(h => { const [x, y] = arcAt(h, A); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2"/>`; }).join('');
+  const label = (t) => { const [x, y] = arcAt(t, A); return `<text x="${x.toFixed(1)}" y="${(y + 16).toFixed(1)}">${clock(t)}</text>`; };
+  sky.querySelector('.ticks').innerHTML = marks + label(RISE) + label(SET) + label(RISE + 24);
+  const [ox, oy] = arcAt(state.t, A);
+  orb.classList.toggle('moon', !isDay(state.t));
+  orb.setAttribute('transform', `translate(${ox.toFixed(1)} ${oy.toFixed(1)})`);
   // the board: recompute where each finish is when the view swings round
   if (anchorAz === null || Math.abs(Math.atan2(Math.sin(az - anchorAz), Math.cos(az - anchorAz))) > 0.4) { computeAnchors(); anchorAz = az; }
   const cards = [...board.children];
