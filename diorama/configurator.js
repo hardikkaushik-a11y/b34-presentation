@@ -1337,25 +1337,20 @@ sky.innerHTML = '<g class="links"></g><path class="arc"/><g class="ticks"></g>'
   + '<g class="orb"><circle class="halo" r="24"/><circle class="disc" r="9"/></g>';
 ui.prepend(sky);
 const orb = sky.querySelector('.orb');
-const ringStats = (ring) => {
-  let x = 0, y = 0; for (const [a, b] of ring) { x += a; y += b; } x /= ring.length; y /= ring.length;
-  return { c: W(x, y), R: Math.max(...ring.map(([a, b]) => Math.hypot(a - x, b - y))) };
-};
 // Seen from this camera the sun's true path runs nearly edge-on (it would draw as a
-// line through the flat), so the day is drawn as two arches over the model on screen.
+// line through the flat), so the day is drawn as two small arches above the model.
 function toScreen(v) {
   const q = v.clone().project(camera), r = el.getBoundingClientRect();
   return [r.left + (q.x * 0.5 + 0.5) * r.width, r.top + (-q.y * 0.5 + 0.5) * r.height];
 }
+// The track lives in the strip along the top, between the title and the toolbar, so it
+// never crosses the model.
 function skyArc() {
-  const f = api.focused, ring = f ? f.island : zone.zone, { c, R } = ringStats(ring);
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  for (const [a, b] of ring) for (const h of [0, CUT]) {
-    const [x, y] = toScreen(W(a, b).setY(h));
-    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-  }
-  const top = Math.max(140, y0 - 36), base = y0 + (y1 - y0) * 0.42;
-  return { cx: (x0 + x1) / 2, cy: base, rx: (x1 - x0) * 0.56, ry: Math.max(60, base - top) };
+  const title = document.querySelector('.title').getBoundingClientRect(), tools = $('.tools', ui).getBoundingClientRect();
+  const x0 = title.right + 40, x1 = tools.left - 40, w = Math.max(160, Math.min(720, x1 - x0));
+  // with the moodboard showing, its cards take that strip: the track drops below them
+  const cy = document.body.classList.contains('no-board') ? 92 : 212;
+  return { cx: (x0 + x1) / 2, cy, rx: w / 2, ry: 52 };
 }
 // a time on the day's track: before sunrise counts as the end of the night
 const onTrack = (t) => (t < RISE ? t + 24 : t);
