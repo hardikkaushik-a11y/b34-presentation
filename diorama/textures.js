@@ -31,7 +31,7 @@ function shade(c, k) {
 function canvas(size) {
   const c = document.createElement('canvas');
   c.width = c.height = size;
-  return [c, c.getContext('2d')];
+  return [c, c.getContext('2d', { willReadFrequently: true })];   // kept in memory: relief maps read it back
 }
 
 function finish(c, repeatMetres, { color = true } = {}) {

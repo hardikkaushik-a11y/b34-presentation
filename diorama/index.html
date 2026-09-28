@@ -218,6 +218,7 @@
   #chips { display:none; }
   /* ---------------- phones: title and tools on top, a slim daylight bar, a strip of
      room chips instead of labels over the model, the tray as a bottom sheet */
+  .fail { position:fixed; left:12px; right:12px; bottom:20px; z-index:50; padding:12px 14px; border-radius:12px; background:rgba(28,22,18,.92); border:1px solid var(--line); color:#E8DFD3; font-size:12.5px; line-height:1.4; }
   @media (max-width:700px) {
     .title { left:14px; top:12px; right:150px; }
     .title .k { font-size:9px; letter-spacing:.18em; }
@@ -271,6 +272,22 @@
 <div class="credit" id="credit">Ar. Shivangi Kaushik · Studio Spindle</div>
 <div class="hint">Click a room to open it · Drag to orbit · Scroll to zoom</div>
 <div id="tip" hidden></div>
+<script>
+// If the controls fail to start on a browser, say so on the page (with the reason) rather
+// than leaving only the model.
+(() => {
+  let why = '';
+  addEventListener('error', (e) => { why ||= e.message || String(e.error || ''); });
+  addEventListener('unhandledrejection', (e) => { why ||= String(e.reason?.message || e.reason || ''); });
+  const check = () => {
+    if (document.getElementById('ui') || !document.body.classList.contains('ready')) return;
+    const n = document.createElement('div'); n.className = 'fail';
+    n.textContent = "The controls didn't load on this browser. Reload to try again." + (why ? ' (' + why + ')' : '');
+    document.body.appendChild(n);
+  };
+  setTimeout(check, 45000);
+})();
+</script>
 <script src="../rooms-tour.js"></script>
 <script type="module" src="./diorama.js"></script>
 <script type="module" src="./configurator.js"></script>

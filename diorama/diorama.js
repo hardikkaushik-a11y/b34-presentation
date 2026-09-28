@@ -28,7 +28,9 @@ const W = (x, y) => new THREE.Vector3(x - CX, 0, -(y - CY));
 // ------------------------------------------------------------------ renderer
 const host = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// Phones get a lighter scene: less resolution, a smaller shadow map, no ambient occlusion.
+const lite = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 500;
+renderer.setPixelRatio(Math.min(devicePixelRatio, lite ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
@@ -105,7 +107,7 @@ const hemi = new THREE.HemisphereLight(0xfff1e0, 0x2a221b, 0.32);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffe9cf, 3.4);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(lite ? 2048 : 4096, lite ? 2048 : 4096);
 sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.025;
 Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 80 });
 scene.add(sun, sun.target);
@@ -936,7 +938,7 @@ const gtao = new GTAOPass(scene, camera, 1, 1);
 gtao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.4, thickness: 1.0, scale: 1.0, samples: 16 });
 gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
 gtao.blendIntensity = 0.85;
-composer.addPass(gtao);
+if (!lite) composer.addPass(gtao);
 composer.addPass(new SMAAPass());
 composer.addPass(new OutputPass());
 // what the loop draws: the model view, or walk mode's own camera and passes
@@ -1037,6 +1039,7 @@ frameHooks.push(() => {
   return true;
 });
 export const api = {
+  lite,
   THREE, scene, camera, renderer, composer, controls, host, M, B, zone, W, CX, CY, CUT,
   inRing, inWall, prism, mesh, rbox, pieces, pieceGroups, placePiece, models, modelRoots,
   sun, hemi, fill, placeSun, dirtyShadows, wake, lightHooks, frameHooks, tip, spaces, safe,

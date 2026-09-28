@@ -20,17 +20,23 @@ export function createWalk(api, { onChange } = {}) {
   // ---------------------------------------------------------------- camera and passes
   const cam = new THREE.PerspectiveCamera(64, 1, 0.05, 80);
   cam.rotation.order = 'YXZ';
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, cam));
-  const gtao = new GTAOPass(scene, cam, 1, 1);
-  gtao.updateGtaoMaterial({ radius: 0.3, distanceExponent: 1.3, thickness: 1.0, scale: 1.0, samples: 12 });
-  gtao.blendIntensity = 0.7;
-  composer.addPass(gtao);
-  composer.addPass(new SMAAPass());
-  composer.addPass(new OutputPass());
-  const size = (w, h) => { cam.aspect = w / h; cam.updateProjectionMatrix(); composer.setSize(w, h); };
+  // made the first time you walk, so the page does not carry a second set of buffers
+  let composer = null;
+  function passes() {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, cam));
+    if (!api.lite) {                             // phones skip ambient occlusion
+      const gtao = new GTAOPass(scene, cam, 1, 1);
+      gtao.updateGtaoMaterial({ radius: 0.3, distanceExponent: 1.3, thickness: 1.0, scale: 1.0, samples: 12 });
+      gtao.blendIntensity = 0.7;
+      composer.addPass(gtao);
+    }
+    composer.addPass(new SMAAPass());
+    composer.addPass(new OutputPass());
+    size(api.host.clientWidth, api.host.clientHeight);
+  }
+  const size = (w, h) => { cam.aspect = w / h; cam.updateProjectionMatrix(); composer?.setSize(w, h); };
   api.resizeHooks.push(size);
-  size(api.host.clientWidth, api.host.clientHeight);
 
   // ---------------------------------------------------------------- the rooms made whole
   // Lintels over every opening the model view leaves open above door height, and a
@@ -325,6 +331,7 @@ export function createWalk(api, { onChange } = {}) {
     raise();
     start(room);
     place();
+    if (!composer) passes();
     api.useView({ camera: cam, composer });
     document.body.classList.add('walking');
     api.dirtyShadows();

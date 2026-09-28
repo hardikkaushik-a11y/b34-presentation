@@ -35,7 +35,7 @@ export function createProducts(api) {
   const FINISH = { chrome: MP.chrome, bronze: MP.bronze, black: MP.black, gold: MP.gold };
 
   // ---------------------------------------------------------------- tile textures
-  function canvas(w, h = w) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+  function canvas(w, h = w) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d', { willReadFrequently: true })]; }
   const hex = (c) => '#' + new THREE.Color(c).getHexString();
   function tex(c, uM, vM) {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;

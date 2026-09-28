@@ -118,6 +118,18 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
   board are hidden. The finishes panel is a bottom sheet, the piece card sits above it,
   and `measureSafe` in `configurator.js` fits the model between the chips and the sheet.
 
+### Startup speed and phones
+
+- Relief (normal) maps are made the first time a finish goes on a surface, not for tray
+  swatches, and texture canvases are kept in memory (`willReadFrequently`) because the
+  relief maps read them back. The controls now appear about 2 s after load instead of
+  8 to 9 s (desktop Chromium), about 6.6 s instead of 14 s with the CPU slowed 4x.
+- Walk mode builds its render passes the first time you walk, not at load.
+- Phones (`api.lite`: coarse pointer, screen 500 px or less on its short side): pixel
+  ratio capped at 1.5, a 2048 shadow map, no ambient occlusion pass, in plan or walk.
+- If the controls have not appeared 45 s after the model, the page says so with the
+  error it caught (inline script in `index.html`), instead of showing only the model.
+
 ### Borrowed from Construct (construct.aswinnair.com), rebuilt in our own code
 
 - Walk mode (`diorama/walk.js`, the walking figure in the toolbar): eye height 1.55 m in

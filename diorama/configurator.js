@@ -163,7 +163,10 @@ function finishFor(s, room_slot) {
     else if (s.kind === 'limewash') { map = limewash({ base: s.c, seed }); rough = 0.95; ns = 0.5; str = 3; }
     else { map = paint({ base: s.c, seed }); rough = slot === 'doors' ? 0.55 : 0.9; ns = 0.3; str = 3; }
   }
-  const f = { map, normalMap: normalFrom(map, str), rough, cc, ccr, sheen, sheenR, ns,
+  // the relief map is made the first time the finish goes on a surface; a tray swatch
+  // only needs the colour
+  let relief = null;
+  const f = { map, get normalMap() { return relief ??= normalFrom(map, str); }, rough, cc, ccr, sheen, sheenR, ns,
               sheenColor: new THREE.Color(s.c).lerp(new THREE.Color(0xffffff), 0.45) };
   texCache.set(key, f);
   return f;
