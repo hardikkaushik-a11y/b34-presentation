@@ -23,6 +23,9 @@ export function createProducts(api) {
     gold: phys({ color: 0xD2AC62, metalness: 0.85, roughness: 0.22, envMapIntensity: 1.6 }),
     nozzles: phys({ color: 0x2B2B2B, roughness: 0.6 }),
     blackMetal: phys({ color: 0x151515, metalness: 0.65, roughness: 0.42 }),
+    // Living Shapes Alici (LS-1087): rust bouclé, legs in a matching matt powder coat
+    rustBoucle: withRelief(boucle({ base: 0xB0512B, seed: 76 }), 5, { roughness: 0.95, sheen: 0.5, sheenRoughness: 0.7, sheenColor: new THREE.Color(0xE7A07A) }),
+    rustCoat: phys({ color: 0x7E4430, metalness: 0.25, roughness: 0.72 }),
     boucle: withRelief(boucle({ base: 0xD8CEBD, seed: 71 }), 5, { roughness: 0.95, sheen: 0.5, sheenRoughness: 0.7, sheenColor: new THREE.Color(0xF4EEE3) }),
     ivory: withRelief(fabric({ base: 0xE4DCCD, seed: 72 }), 3.5, { roughness: 0.92, sheen: 0.45, sheenRoughness: 0.7, sheenColor: new THREE.Color(0xFBF7EF) }),
     darkWood: withRelief(wood({ base: 0x3E2C21, dark: 0x160F0A, plank: 0.3, length: 1.2, seed: 73 }), 2.5, { roughness: 0.45, clearcoat: 0.15 }),
@@ -205,9 +208,27 @@ export function createProducts(api) {
       hoop.rotation.set(-Math.PI / 2, 0, a0); g.add(hoop);
       return g;
     },
-    // Living Shapes Alici: dimensions and photos not yet read (site blocked from the
-    // build machine), so this reuses the bouclé-on-metal form until they are in.
-    alici: (p) => BUILD.boucle_black(p),
+    // Living Shapes Alici, from the maker's spec sheet (LS-1087): 52.7 W x 57.2 D x
+    // 84.5 H cm, seat 49.5 cm high with a 7.6 cm cushion, back 38 cm above the seat,
+    // legs on a 38 cm square. Rust bouclé over a rounded shell back that wraps the
+    // seat; round legs in the same rust, matt powder coated.
+    alici(p) {
+      const g = facing(p, p.facing), leg = 0.42, foot = 0.19;
+      for (const [x, z] of [[-foot, foot], [foot, foot], [-foot, -foot], [foot, -foot]]) {
+        const l = mesh(new THREE.CylinderGeometry(0.011, 0.01, leg, 12), MP.rustCoat, x, leg / 2, z);
+        l.rotation.set(Math.sign(z) * 0.03, 0, -Math.sign(x) * 0.03); g.add(l);
+      }
+      for (const x of [-foot, foot]) g.add(mesh(new THREE.BoxGeometry(0.018, 0.018, 2 * foot), MP.rustCoat, x, leg - 0.01, 0));
+      g.add(mesh(rbox(0.5, 0.076, 0.44, 0.035), MP.rustBoucle, 0, 0.457, 0.05));
+      // the shell back: an upholstered band on a 150 degree arc, its top rolled
+      const R = 0.26, span = THREE.MathUtils.degToRad(150), t = 0.06, s = new THREE.Shape();
+      const a0 = Math.PI / 2 - span / 2, a1 = Math.PI / 2 + span / 2, h = 0.845 - 0.03 - 0.42;
+      s.absarc(0, 0, R, a0, a1, false); s.absarc(0, 0, R - t, a1, a0, true);
+      g.add(mesh(extrudeUp(s, h, 0.012), MP.rustBoucle, 0, 0.42, 0.03));
+      const roll = mesh(new THREE.TorusGeometry(R - t / 2, t / 2, 10, 40, span), MP.rustBoucle, 0, 0.42 + h, 0.03);
+      roll.rotation.set(-Math.PI / 2, 0, a0); g.add(roll);
+      return g;
+    },
     // Ivory upholstered chair on a dark wood frame (pin 2)
     ivory_walnut(p) {
       const g = facing(p, p.facing);
@@ -266,7 +287,7 @@ export function createProducts(api) {
       { id: 'drawn', name: 'Linen, walnut', note: 'as drawn' },
       { id: 'boucle_black', name: 'Bouclé, black metal', note: 'Sfera MM style, pin 1' },
       { id: 'ivory_walnut', name: 'Ivory, dark wood', note: 'reference pin 2' },
-      { id: 'alici', name: 'Bouclé Alici, metal', note: 'Living Shapes · ₹6,399', brand: 'Living Shapes', price: 6399,
+      { id: 'alici', name: 'Alici, rust bouclé', note: 'Living Shapes · ₹6,399', brand: 'Living Shapes', code: 'LS-1087', price: 6399,
         url: 'https://livingshapes.in/products/boucle-alici-dining-chair-with-metal' }] },
     ...['tlt1', 'tlt2', 'tlt3', 'tlt4'].flatMap(t => [
       { key: `basin.${t}`, label: 'Basin', rooms: [t], options: [

@@ -14,9 +14,8 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { marble, wood, fabric, shutter, tambour, paint, terrazzo, leather, limewash, normalFrom } from './textures.js';
+import { buildBedrooms } from './bedrooms.js';
 
 const zone = await (await fetch('../assets/diorama/zone.json')).json();
 const [CX, CY] = zone.centre;
@@ -161,12 +160,6 @@ std('terrazzo', { map: terrazzo({ base: 0xD9CDBA }), roughness: 0.3 });
 std('washer',   { color: 0xEDEDEA, roughness: 0.35 });
 // her Toilet 3 vanity: walnut by her spec, kept apart from the swappable woodwork
 std('t3walnut', { map: M.walnut.map, roughness: 0.5 });
-// Her bedroom models carry their own floors and wall faces, in the same place as the
-// shell's. Push the shell's surfaces back in depth by a hair so hers always win
-// instead of the two fighting (the flicker).
-// Not the floor: it already sits 4 mm under hers, and the slope term grows with pixel
-// size, so zoomed out it pushed the floor behind the plinth 1.7 cm below (black floor).
-for (const k of ['walls', 'section', 'sill']) Object.assign(M[k], { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
 M.glass = new THREE.MeshPhysicalMaterial({ color: 0xdcebf0, roughness: 0.04, metalness: 0, transparent: true,
                                           opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });
 
@@ -479,127 +472,29 @@ function placePiece(p) {
 }
 for (const p of zone.pieces) placePiece(p);
 
-// ------------------------------------------------------------------ her bedroom models
-// The four bedrooms are Ar. Shivangi Kaushik's own 3D models, placed by the
-// registration in assets/cad-draft/scene.json (a draft, anchored on wall faces),
-// cut at the section height like everything else and trimmed to her room so their
-// outer walls give way to the shell's. Materials use the corrections from
-// rooms-materials.js, read the way the r128 walkthrough read them (hex as linear),
-// so they look as they were signed off there.
+// ------------------------------------------------------------------ her bedrooms
+// The four bedrooms are Ar. Shivangi Kaushik's design, rebuilt here in the flat's own
+// procedural style (bedrooms.js) instead of loading her SketchUp exports: same layout,
+// sizes, facing and finishes, drawn fresh. They stay locked to her finishes. Each room
+// is one root in `models`, so hover, the cutaway and the curtain button treat it as
+// one designed room, as they treated her models.
 const models = new THREE.Group(); scene.add(models);
 const modelRoots = {};
-/* Curtain parts identified from the actual room GLBs. Keep this explicit: broad
-   material-name matching previously confused Bedroom 1's frosted joinery and
-   Bedroom 2's fluted wardrobe with window dressing. */
-const CURTAIN_MATERIALS = {
-  master: new Set(['Two_Sided']),
-  // Bedroom 1's material called "Plain_White_Sheer" is actually a low bed textile
-  // (only 46 cm high), so hiding it removed part of the bed. Its balcony-door curtain
-  // is added explicitly below because it is absent from the exported room model.
-  bed1:   new Set(),
-  bed2:   new Set(['Two_Sided_3', 'Plain_White_Sheer_3769679_28cm_2']),
-  bed3:   new Set(['Two_Sided']),
-};
-const CURTAIN_MODE = { master: 'side', bed1: 'split', bed2: 'roman', bed3: 'side' };
+const { roots: bedroomRoots, curtainMode: CURTAIN_MODE } = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone });
 const curtainMeshes = {}, curtainsOpen = new Set();
-function addBed1BalconyCurtain(root) {
-  // The narrow walk-in passage ends at the balcony opening. Local room coordinates
-  // were measured from bed1.glb: x -1.68..-0.32, z about -3.63, floor at y 0.
-  // Two gently folded panels read as fabric from the cutaway and can be hidden by
-  // the same daylight control as the authored curtains in the other bedrooms.
-  const material = new THREE.MeshPhysicalMaterial({
-    name: 'B34_Bed1_Balcony_Curtain', color: 0xD8CEBF, roughness: 0.94,
-    sheen: 0.55, sheenRoughness: 0.78, sheenColor: new THREE.Color(0xFFF7EA),
-    transparent: true, opacity: 0.82, depthWrite: false, side: THREE.DoubleSide,
-  });
-  const panel = (x, phase) => {
-    const g = new THREE.PlaneGeometry(0.67, 2.48, 18, 2), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const u = p.getX(i) / 0.67 + 0.5;
-      p.setZ(i, Math.sin((u * 8 + phase) * Math.PI) * 0.026);
-    }
-    g.computeVertexNormals();
-    const m = new THREE.Mesh(g, material);
-    m.position.set(x, 1.29, -3.58); m.castShadow = m.receiveShadow = true;
-    m.userData.curtain = 'bed1'; m.userData.curtainRole = 'original';
-    root.add(m);
-  };
-  panel(-1.335, 0); panel(-0.665, 0.5);
-  const rod = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.013, 0.013, 1.48, 18),
-    new THREE.MeshPhysicalMaterial({ color: 0x66584A, metalness: 0.65, roughness: 0.32 })
-  );
-  rod.rotation.z = Math.PI / 2; rod.position.set(-1, 2.58, -3.555); rod.castShadow = true;
-  root.add(rod);
-}
-function curtainMaterial(source, { sheer = false } = {}) {
-  const m = physicalMaterial(source).clone();
-  m.name += sheer ? '_open_sheer' : '_gathered';
-  m.transparent = sheer;
-  m.opacity = sheer ? 0.20 : 0.93;
-  m.depthWrite = !sheer;
-  m.roughness = sheer ? 0.95 : Math.max(0.82, m.roughness);
-  m.metalness = 0;
-  m.sheen = sheer ? 0.2 : 0.58;
-  m.sheenRoughness = 0.82;
-  if (sheer) m.color.setHex(0xEAE4D9, THREE.LinearSRGBColorSpace);
-  m.side = THREE.DoubleSide;
-  return m;
-}
-function makeOpenCurtains(root, rid, originals) {
-  if (!originals.length || CURTAIN_MODE[rid] !== 'side') return [];
-  const box = new THREE.Box3();
-  for (const o of originals) box.union(new THREE.Box3().setFromObject(o));
-  if (box.isEmpty()) return [];
-  const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
-  const alongX = size.x >= size.z, width = alongX ? size.x : size.z;
-  const depth = alongX ? size.z : size.x, height = size.y;
-  const fabricSource = [].concat(originals[0].material)[0];
-  const group = new THREE.Group();
-  group.name = `B34_${rid}_OpenCurtains`;
-  group.userData.curtain = rid; group.userData.curtainRole = 'proxy';
-  const panelW = Math.max(0.22, width * 0.18);
-  for (const side of [-1, 1]) {
-    const g = new THREE.PlaneGeometry(panelW, height * 0.96, 16, 12), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const u = p.getX(i) / panelW + 0.5, v = p.getY(i) / height + 0.5;
-      p.setZ(i, Math.sin((u * 9 + side * 0.35) * Math.PI) * 0.035 + Math.sin(v * Math.PI) * 0.018);
-    }
-    g.computeVertexNormals();
-    const panel = new THREE.Mesh(g, curtainMaterial(fabricSource));
-    if (alongX) panel.position.set(centre.x + side * (width - panelW) * 0.5, centre.y, centre.z);
-    else { panel.rotation.y = Math.PI / 2; panel.position.set(centre.x, centre.y, centre.z + side * (width - panelW) * 0.5); }
-    panel.castShadow = panel.receiveShadow = true;
-    panel.userData.curtain = rid; panel.userData.curtainRole = 'proxy';
-    group.add(panel);
-  }
-  // Keep a light sheer across the glass. Opening the drapes should reveal the view,
-  // not erase every trace of the designed window treatment.
-  const sheer = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.96, height * 0.94), curtainMaterial(fabricSource, { sheer: true }));
-  if (alongX) sheer.position.set(centre.x, centre.y, centre.z - Math.max(0.015, depth * 0.08));
-  else { sheer.rotation.y = Math.PI / 2; sheer.position.set(centre.x - Math.max(0.015, depth * 0.08), centre.y, centre.z); }
-  sheer.receiveShadow = true; sheer.userData.curtain = rid; sheer.userData.curtainRole = 'proxy'; sheer.userData.curtainPart = 'sheer';
-  group.add(sheer); group.visible = false; root.add(group);
-  return [group];
-}
 function rememberCurtainBase(o) {
   if (o.userData.curtainBase) return;
   const h = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).y;
   o.userData.curtainBase = { position: o.position.clone(), scale: o.scale.clone(), height: h };
 }
 function registerCurtains(root, rid) {
-  const wanted = CURTAIN_MATERIALS[rid], found = [];
-  if (wanted) root.traverse(o => {
-    if (!o.isMesh) return;
-    const names = [].concat(o.material).map(m => m?.name).filter(Boolean);
-    if (o.userData.curtain === rid || names.some(n => wanted.has(n))) {
-      o.userData.curtain = rid;
-      o.userData.curtainRole ||= 'original';
-      rememberCurtainBase(o); found.push(o);
-    }
+  const found = [];
+  root.traverse(o => {
+    if (o.userData.curtain !== rid) return;
+    if (o.isMesh && (o.userData.curtainRole || 'original') === 'original') rememberCurtainBase(o);
+    if (o.isMesh || o.isGroup) found.push(o);
   });
-  const proxies = makeOpenCurtains(root, rid, found);
-  curtainMeshes[rid] = [...found, ...proxies];
+  curtainMeshes[rid] = found;
   setCurtainsOnRoot(root, rid, curtainsOpen.has(rid));
   queueMicrotask(() => window.dispatchEvent(new Event('b34-curtains-ready')));
 }
@@ -611,7 +506,7 @@ function setCurtainsOnRoot(root, rid, open) {
     const role = o.userData.curtainRole || 'original';
     if (role === 'proxy') {
       // gathered drapes and a light sheer stand in for the curtains only while they
-      // are open; closed, her own curtains show alone (both at once overlapped)
+      // are open; closed, her drapes show alone
       if (o.isGroup) o.visible = open;
       if (o.userData.curtainPart === 'sheer' && o.material) o.material.opacity = 0.16;
       return;
@@ -622,105 +517,20 @@ function setCurtainsOnRoot(root, rid, open) {
     o.position.copy(base.position); o.scale.copy(base.scale);
     if (!open) return;
     if (mode === 'side') { o.visible = false; return; }
-    if (mode === 'split') {
-      const left = base.position.x < -1;
-      o.scale.x = base.scale.x * 0.34;
-      o.position.x = base.position.x + (left ? -0.23 : 0.23);
-    } else if (mode === 'roman') {
+    if (mode === 'roman') {
       o.scale.y = base.scale.y * 0.20;
       o.position.y = base.position.y + base.height * 0.40;
     }
   });
 }
 function setCurtainsOpen(rid, open) {
-  if (!CURTAIN_MATERIALS[rid]) return;
+  if (!CURTAIN_MODE[rid]) return;
   if (open) curtainsOpen.add(rid); else curtainsOpen.delete(rid);
   for (const root of [modelRoots[rid], lowCopies[rid]]) setCurtainsOnRoot(root, rid, open);
   dirtyShadows();
 }
 const hasCurtains = rid => !!curtainMeshes[rid]?.length;
 const curtainRooms = () => Object.keys(curtainMeshes).filter(hasCurtains);
-const draco = new DRACOLoader().setDecoderPath('./lib/draco/');
-const gltf = new GLTFLoader().setDRACOLoader(draco);
-const lin = (c, h) => c.setHex(h, THREE.LinearSRGBColorSpace);
-const physicalMaterials = new WeakMap();
-function physicalMaterial(source) {
-  if (source.isMeshPhysicalMaterial) return source;
-  if (physicalMaterials.has(source)) return physicalMaterials.get(source);
-  const m = new THREE.MeshPhysicalMaterial();
-  m.name = source.name;
-  for (const k of ['map','alphaMap','aoMap','bumpMap','displacementMap','emissiveMap','envMap','lightMap',
-                   'metalnessMap','normalMap','roughnessMap']) m[k] = source[k] || null;
-  m.color.copy(source.color); m.emissive.copy(source.emissive);
-  for (const k of ['roughness','metalness','bumpScale','displacementScale','displacementBias','emissiveIntensity',
-                   'opacity','alphaTest','side','shadowSide','transparent','depthTest','depthWrite','vertexColors',
-                   'flatShading','fog','polygonOffset','polygonOffsetFactor','polygonOffsetUnits']) {
-    if (source[k] !== undefined) m[k] = source[k];
-  }
-  m.normalScale.copy(source.normalScale || new THREE.Vector2(1, 1));
-  m.userData = { ...source.userData };
-  physicalMaterials.set(source, m);
-  return m;
-}
-function finishImported(m) {
-  const n = m.name.toLowerCase();
-  const fabricLike = /fabric|linen|sheer|curtain|cloth|uphol|velvet/.test(n);
-  const leatherLike = /leather/.test(n);
-  const stoneLike = /stone|marble|granite|travert|flooring|tile/.test(n);
-  const woodLike = /wood|walnut|oak|teak|veneer/.test(n);
-  const lacquerLike = /generic|lacquer|wardrobe|shutter/.test(n);
-  if (fabricLike) {
-    m.sheen = 0.48; m.sheenRoughness = 0.78;
-    m.sheenColor.copy(m.color).lerp(new THREE.Color(0xFFF8EE), 0.38);
-  } else if (leatherLike) {
-    m.sheen = 0.16; m.sheenRoughness = 0.48; m.clearcoat = 0.1; m.clearcoatRoughness = 0.38;
-  } else if (stoneLike) {
-    m.clearcoat = 0.24; m.clearcoatRoughness = 0.18;
-  } else if (woodLike) {
-    m.clearcoat = 0.10; m.clearcoatRoughness = 0.34;
-  } else if (lacquerLike && m.roughness < 0.7) {
-    m.clearcoat = 0.13; m.clearcoatRoughness = 0.28;
-  }
-  const a = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  for (const t of [m.map, m.normalMap, m.roughnessMap, m.metalnessMap]) if (t) t.anisotropy = a;
-}
-// (A pass here once laid generated marble, limewash and wood grain over her flat
-// colours. It made her rooms read as something she did not design and cost ~280
-// extra textures, so her models now keep the colours in rooms-materials.js.)
-function palette(root, rid) {
-  const R = window.ROOMMAT || {};
-  root.traverse(o => {
-    if (!o.isMesh) return;
-    o.castShadow = o.receiveShadow = true;
-    const mats = [].concat(o.material).map(physicalMaterial);
-    o.material = Array.isArray(o.material) ? mats : mats[0];
-    for (const m of mats) {
-      const exact = R.rooms?.[rid]?.[m.name];
-      const vray = !exact && !m.map && R.vray?.[rid]?.[m.name];
-      const e = exact || vray || (!m.map && R.common?.find(c => m.name.toLowerCase().includes(c.match)));
-      if (e) {
-        if (exact) m.map = null;
-        lin(m.color, e.color);
-        if (e.rough !== undefined) m.roughness = e.rough;
-        if (e.metal) m.metalness = 1;
-        if (e.emissive !== undefined && m.emissive) { lin(m.emissive, e.emissive); m.emissiveIntensity = e.glow === undefined ? 1 : e.glow; }
-        if (e.opacity !== undefined) { m.transparent = true; m.opacity = e.opacity; m.depthWrite = false; }
-      }
-      const T = R.tune, tn = T && (T.rooms?.[rid]?.[m.name] || T.common?.find(t => m.name.toLowerCase().includes(t.match)));
-      if (tn) {
-        if (tn.rough !== undefined) m.roughness = tn.rough;
-        if (tn.metal !== undefined) m.metalness = tn.metal;
-        if (tn.color !== undefined) lin(m.color, tn.color);
-        if (tn.env !== undefined) m.envMapIntensity = tn.env;
-      }
-      finishImported(m);
-      if (m.envMapIntensity === undefined || m.envMapIntensity === 1)
-        m.envMapIntensity = m.roughness < 0.3 ? 1.15 : m.clearcoat > 0 ? 0.62 : 0.38;
-      m.side = THREE.DoubleSide;
-      m.needsUpdate = true;
-    }
-  });
-}
 function clipTo(root, [x0, y0, x1, y1]) {
   const planes = [
     new THREE.Plane(new THREE.Vector3(1, 0, 0), -(x0 - CX)),
@@ -732,25 +542,15 @@ function clipTo(root, [x0, y0, x1, y1]) {
 }
 const status = document.getElementById('status');
 const modelRooms = zone.rooms.filter(r => r.model);
-let loadedCount = 0;
-const modelsReady = Promise.all(modelRooms.map(r => gltf.loadAsync(r.model.glb).then(g => {
-  const root = g.scene;
-  palette(root, r.id);
-  if (r.id === 'bed1') addBed1BalconyCurtain(root);
-  registerCurtains(root, r.id);
-  const t = r.model.translation_xyz;
-  root.position.set(t[0] - CX, t[1], t[2] + CY);
-  root.rotation.set(...r.model.rotation_xyz);
-  clipTo(root, r.model.clip_xy);
+for (const r of modelRooms) {
+  const root = bedroomRoots[r.id];
+  if (!root) continue;
   root.traverse(o => { o.userData.model = r; });
+  registerCurtains(root, r.id);
   root.userData.home = r.id;
-  root.visible = !focused || focused.id === r.id;
   models.add(root); modelRoots[r.id] = root;
-  status.textContent = `Loading bedrooms ${++loadedCount} of ${modelRooms.length}`;
-  if (loadedCount === modelRooms.length) setTimeout(() => status.textContent = '', 1800);
-  dirtyShadows();
-}).catch(e => { console.error(r.id, e); status.textContent = `Could not load ${r.name}: ${e.message}`; })));
-status.textContent = `Loading bedrooms 0 of ${modelRooms.length}`;
+}
+const modelsReady = Promise.resolve();
 
 // ------------------------------------------------------------------ cutaway
 // Like a physical model: walls on the side facing you drop to knee height so the
@@ -800,18 +600,19 @@ function cutaway(force) {
 }
 controls.addEventListener('change', () => cutaway());
 
-// Her models carry their own walls. In single-room view the model is drawn twice:
-// a copy kept below knee height across the whole room, and the original with its
-// camera-facing edge trimmed off above that. The walls on your side drop, the rest
-// (her headboard walls, wardrobes) stay at full height, and the trim follows the
-// camera. clipShadows keeps the dropped walls from still casting shadow.
+// In single-room view a bedroom is drawn twice: a copy kept below knee height across
+// the whole room, and the original with its camera-facing edge trimmed off above
+// that. Joinery on the walls on your side drops with those walls, the rest (her
+// headboard walls, wardrobes) stays at full height, and the trim follows the camera.
+// clipShadows keeps the dropped pieces from still casting shadow.
 const lowCopies = {};
 function modelCut(rid) {
   const root = modelRoots[rid], r = zone.rooms.find(q => q.id === rid);
   if (!root || !r) return;
   const [x0, y0, x1, y1] = r.model.clip_xy;
   const d = new THREE.Vector3().subVectors(camera.position, controls.target); d.y = 0; d.normalize();
-  const px = d.x, py = -d.z, IN = 0.45;
+  // deep enough to take a full 60 cm wardrobe on the near wall down with its wall
+  const px = d.x, py = -d.z, IN = 0.7;
   const X0 = x0 + (px < -0.2 ? IN : 0), X1 = x1 - (px > 0.2 ? IN : 0);
   const Y0 = y0 + (py < -0.2 ? IN : 0), Y1 = y1 - (py > 0.2 ? IN : 0);
   const planes = [
@@ -928,9 +729,11 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && focused) showFlat()
 
 // room labels over the flat; click one to isolate that room
 const labelHost = document.getElementById('labels');
-const labels = zone.rooms.filter(r => !['store', 'wiw'].includes(r.id) || true).map(r => {
+// Fewer names at once: the small rooms show theirs only while the pointer is over them.
+const MINOR = new Set(['tlt1', 'tlt2', 'tlt3', 'tlt4', 'store', 'wiw', 'lobby', 'entrance']);
+const labels = zone.rooms.map(r => {
   const el = document.createElement('button');
-  el.className = 'room' + (r.model ? ' designed' : '');
+  el.className = 'room' + (r.model ? ' designed' : '') + (MINOR.has(r.id) ? ' minor' : '');
   el.textContent = r.name;
   el.onclick = () => focusRoom(r);
   labelHost.appendChild(el);
@@ -957,13 +760,14 @@ renderer.domElement.addEventListener('pointerup', e => {
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const hit = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
-  if (!hit) return;
-  const px = hit.x + CX, py = CY - hit.z;
-  const cands = zone.rooms.filter(q => inRing([px, py], q.outline));
-  if (!cands.length) return;
-  const area = (ring) => Math.abs(ring.reduce((a, [x, y], i) => { const [x2, y2] = ring[(i + 1) % ring.length]; return a + x * y2 - x2 * y; }, 0) / 2);
-  focusRoom(cands.sort((a, b) => area(a.outline) - area(b.outline))[0]);
+  const room = hit && roomAt(hit.x + CX, CY - hit.z);
+  if (room) focusRoom(room);
 });
+// the smallest room whose outline holds a plan point
+const ringArea = (ring) => Math.abs(ring.reduce((a, [x, y], i) => { const [x2, y2] = ring[(i + 1) % ring.length]; return a + x * y2 - x2 * y; }, 0) / 2);
+function roomAt(px, py) {
+  return zone.rooms.filter(q => inRing([px, py], q.outline)).sort((a, b) => ringArea(a.outline) - ringArea(b.outline))[0] || null;
+}
 
 let t3clad = scene.children.find(o => o.userData.cladding) || null;
 
@@ -994,10 +798,15 @@ addEventListener('resize', resize); resize();
 const tip = document.getElementById('tip');
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let hovered = null;
+const floorHit = new THREE.Vector3();
 renderer.domElement.addEventListener('pointermove', (e) => {
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
+  if (!focused) {                   // a small room's name appears while the pointer is over it
+    const f = ray.ray.intersectPlane(floorPlane, floorHit), under = f && roomAt(f.x + CX, CY - f.z);
+    for (const l of labels) l.el.classList.toggle('near', l.r === under);
+  }
   const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
   const hit = ray.intersectObjects([pieces, models], true).find(h => shown(h.object) && (h.object.userData.piece || h.object.userData.model));
   const u = hit?.object.userData || {};
@@ -1015,7 +824,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   }
   if (key) { tip.style.left = e.clientX + 14 + 'px'; tip.style.top = e.clientY + 14 + 'px'; }
 });
-renderer.domElement.addEventListener('pointerleave', () => { tip.hidden = true; hovered = null; });
+renderer.domElement.addEventListener('pointerleave', () => { tip.hidden = true; hovered = null; for (const l of labels) l.el.classList.remove('near'); });
 
 // ------------------------------------------------------------------ loop
 cutaway(true);
