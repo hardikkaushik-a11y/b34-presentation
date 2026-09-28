@@ -137,10 +137,11 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
    mode works by touch (drag, tap) but has no on-screen movement buttons.
 4. Her DXF and `assets/diorama/layout.json` would let the bedroom boxes be checked
    against the drawing instead of her draft-registered GLBs.
-5. Merge to `main` (goes live) only on Hardik's explicit yes.
 
 ## Rules
 
-- Never commit or push to `main` without Hardik's explicit yes in the current message.
+- Standing instruction from Hardik (2026-09-28): when he asks for a change, ship it live,
+  i.e. commit, push the branch and fast-forward `main`, without asking again. Anything he
+  did not ask for still needs his yes before it goes to `main`.
 - No em dashes in any output. Use a hyphen.
 - Keep the scene light (he tests on an 8 GB M1 Mac and on phones).
