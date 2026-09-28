@@ -880,7 +880,7 @@ ui.innerHTML = `
       <span class="target" hidden><span></span><button title="Clear">×</button></span></div>
     <div class="tray"></div>
   </section>
-  <div class="walkbar"><span>Drag to look around · Tap the floor to walk there · WASD or arrow keys</span><button>Back to plan</button></div>
+  <div class="walkbar"><span>${matchMedia('(max-width:700px)').matches ? 'Drag to look · Tap the floor to walk' : 'Drag to look around · Tap the floor to walk there · WASD or arrow keys'}</span><button>Back to plan</button></div>
   <div class="why" hidden></div>
   <button class="turn-dot" hidden title="Drag to turn · hold Option to turn freely"></button>
   <div class="panel card" hidden><div class="who"><b></b><small></small></div>
@@ -1165,6 +1165,7 @@ const walk = createWalk(api, { onChange: (r) => {
   if (document.getElementById('t-h').textContent !== name) { document.getElementById('t-h').textContent = name; document.getElementById('t-a').textContent = ''; }
 } });
 $('.walkbar button', ui).onclick = () => walk.exit();
+window.__walk = walk;
 const help = $('dialog.help', ui);
 $('.x', help).onclick = () => help.close();
 const TOOL = {
@@ -1581,6 +1582,13 @@ async function makeThumbs() {
 function measureSafe() {
   const w = innerWidth, h = innerHeight, r = (q) => { const e = $(q, ui); return e && getComputedStyle(e).display !== 'none' ? e.getBoundingClientRect() : null; };
   const mood = r('.mood'), day = r('.daylight'), dock = r('.dock');
+  if (w <= 700) {                    // a phone: the model fits between the top strip and the tray
+    const chips = document.getElementById('chips').getBoundingClientRect();
+    api.safe.left = api.safe.right = 6;
+    api.safe.top = (chips.bottom || 160) + 6;
+    api.safe.bottom = dock ? h - dock.top + 6 : 20;
+    return;
+  }
   api.safe.left = mood ? mood.right * 0.85 : 20;
   api.safe.right = day ? (w - day.left) * 0.85 : 20;
   api.safe.top = 70;

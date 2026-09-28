@@ -110,6 +110,14 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
   the strip beside it becomes balcony floor, and a thin black-framed sliding door stands
   between them. Hover names it; a click slides it open and takes you through, both ways.
 
+### Phone layout (up to 700 px wide)
+
+- Title top left, tools cut to walk, link and help, the time of day as a slim bar under
+  them, then a row of room chips (Whole flat plus every room) that scrolls sideways and
+  follows the room on screen. Floating labels, the back button, the sky arc and the
+  board are hidden. The finishes panel is a bottom sheet, the piece card sits above it,
+  and `measureSafe` in `configurator.js` fits the model between the chips and the sheet.
+
 ### Borrowed from Construct (construct.aswinnair.com), rebuilt in our own code
 
 - Walk mode (`diorama/walk.js`, the walking figure in the toolbar): eye height 1.55 m in
@@ -117,6 +125,12 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
   or Back to plan. Walls rise to a 2.85 m ceiling, lintels close over doors and windows,
   door leaves are hidden so doorways are open, the Bedroom 3 sliding door opens as you
   come near. No collision with furniture, only walls.
+- Walking between rooms: `walk.js` builds a 10 cm grid of where you can stand (on a
+  floor, 20 cm clear of any masonry wall) the first time you walk, and a tap walks an
+  A* route through the doorways, pulled straight wherever the line is clear. The shared
+  floor in `zone.json` has thin holes at door thresholds (lobby to master and bedroom 2,
+  the bedroom 3 door); walking ignores holes under 40 cm across. All 210 room to room
+  routes resolve. On touch a tap may wobble 12 px and still count as a tap.
 - Room areas: the title shows the open room's floor area (m² and sq ft) and the flat's
   total (about 184.5 m², 1,986 sq ft, from the drawing's room outlines, not surveyed);
   labels show each room's area on hover.
@@ -133,8 +147,8 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
 1. Hardik to review the rooms against her renders (`/diorama/`, click each bedroom).
 2. Real products for bedroom pieces (beds, chairs, lamps) need names from her or a
    sourcing pass; none are invented.
-3. Phone layout of the diorama is still broken (labels pile up, panels overlap). Walk
-   mode works by touch (drag, tap) but has no on-screen movement buttons.
+3. Walk mode has no on-screen movement buttons on phones; tap to walk and drag to look
+   cover it for now.
 4. Her DXF and `assets/diorama/layout.json` would let the bedroom boxes be checked
    against the drawing instead of her draft-registered GLBs.
 

@@ -12,7 +12,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-const CEIL = 2.85, EYE = 1.55, RADIUS = 0.22, SPEED = 1.4;
+const CEIL = 2.85, EYE = 1.55, RADIUS = 0.2, SPEED = 1.4;
 
 export function createWalk(api, { onChange } = {}) {
   const { scene, renderer, zone, W, CX, CY, CUT, M, prism, inWall, inRing } = api;
@@ -87,9 +87,95 @@ export function createWalk(api, { onChange } = {}) {
   }
 
   // ---------------------------------------------------------------- where you can stand
-  const walkable = (x, y) => api.walkFloors.some(f => inRing([x, y], f.outer) && !f.holes.some(h => inRing([x, y], h)));
-  const clear = (x, y) => walkable(x, y) && !inWall([x, y]) &&
-    [0, 1, 2, 3, 4, 5, 6, 7].every(k => { const a = k * Math.PI / 4; return !inWall([x + Math.cos(a) * RADIUS, y + Math.sin(a) * RADIUS]); });
+  // Holes under 40 cm across are door thresholds in the drawing (the lobby doors to
+  // the master and bedroom 2, the bedroom 3 door); you walk over those.
+  const thin = (h) => { const xs = h.map(p => p[0]), ys = h.map(p => p[1]); return Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) <= 0.4; };
+  const floors = api.walkFloors.map(f => ({ outer: f.outer, holes: f.holes.filter(h => !thin(h)) }));
+  const walkable = (x, y) => floors.some(f => inRing([x, y], f.outer) && !f.holes.some(h => inRing([x, y], h)));
+  // A 10 cm grid of where a person can stand: on a floor, at least RADIUS from any
+  // wall. Built the first time you walk; movement and routes both read it.
+  const G = 0.1;
+  let grid = null;
+  function buildGrid() {
+    const pts = [...zone.zone, ...api.walkFloors.flatMap(f => f.outer)];
+    const x0 = Math.min(...pts.map(p => p[0])) - 0.5, y0 = Math.min(...pts.map(p => p[1])) - 0.5;
+    const nx = Math.ceil((Math.max(...pts.map(p => p[0])) + 0.5 - x0) / G), ny = Math.ceil((Math.max(...pts.map(p => p[1])) + 0.5 - y0) / G);
+    const solid = zone.walls.filter(w => w.kind === 'masonry' || w.kind === 'partition' || w.kind.startsWith('masonry')).map(w => {
+      const xs = w.outer.map(p => p[0]), ys = w.outer.map(p => p[1]);
+      return { ring: w.outer, bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] };
+    });
+    const inSolid = (x, y) => solid.some(q => x >= q.bb[0] && x <= q.bb[2] && y >= q.bb[1] && y <= q.bb[3] && inRing([x, y], q.ring));
+    const wall = new Uint8Array(nx * ny), floorOk = new Uint8Array(nx * ny), stand = new Uint8Array(nx * ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const x = x0 + (i + 0.5) * G, y = y0 + (j + 0.5) * G, k = j * nx + i;
+      wall[k] = inSolid(x, y) ? 1 : 0;
+      floorOk[k] = !wall[k] && walkable(x, y) ? 1 : 0;
+    }
+    const r = Math.ceil(RADIUS / G), disc = [];
+    for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) if (Math.hypot(di, dj) * G <= RADIUS + 1e-6) disc.push([di, dj]);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const k = j * nx + i;
+      if (!floorOk[k]) continue;
+      stand[k] = disc.every(([di, dj]) => { const a = i + di, b = j + dj; return a < 0 || b < 0 || a >= nx || b >= ny || !wall[b * nx + a]; }) ? 1 : 0;
+    }
+    grid = { x0, y0, nx, ny, stand };
+  }
+  const cell = (x, y) => [Math.floor((x - grid.x0) / G), Math.floor((y - grid.y0) / G)];
+  const standAt = (i, j) => i >= 0 && j >= 0 && i < grid.nx && j < grid.ny && grid.stand[j * grid.nx + i] === 1;
+  const clear = (x, y) => { const [i, j] = cell(x, y); return standAt(i, j); };
+  const centre = (i, j) => [grid.x0 + (i + 0.5) * G, grid.y0 + (j + 0.5) * G];
+  // the nearest cell to stand in, within about a metre
+  function nearest(i, j) {
+    if (standAt(i, j)) return [i, j];
+    for (let r = 1; r <= 10; r++) {
+      let best = null, bd = Infinity;
+      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        if (Math.max(Math.abs(di), Math.abs(dj)) !== r || !standAt(i + di, j + dj)) continue;
+        const d = Math.hypot(di, dj); if (d < bd) { bd = d; best = [i + di, j + dj]; }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+  const sight = (a, b) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(l / 0.05));
+    for (let k = 1; k <= n; k++) if (!clear(a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n)) return false; return true; };
+  // A route through the doorways to a tapped point: A* over the grid (8 neighbours,
+  // no cutting corners), then pulled straight wherever there is a clear line.
+  function route(tx, ty) {
+    const s = nearest(...cell(pos.x, pos.y)), t = nearest(...cell(tx, ty));
+    if (!s || !t) return null;
+    const { nx, ny } = grid, N = nx * ny, g = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), shut = new Uint8Array(N);
+    const key = (i, j) => j * nx + i, goal = key(...t), h = (i, j) => Math.hypot(i - t[0], j - t[1]);
+    const heap = [];                                       // [f, k], a binary min-heap
+    const push = (f, k) => { heap.push([f, k]); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+    const pop = () => { const top = heap[0], end = heap.pop(); if (heap.length) { heap[0] = end; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c;
+      if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+    g[key(...s)] = 0; push(h(...s), key(...s));
+    let found = false;
+    while (heap.length) {
+      const [, k] = pop();
+      if (shut[k]) continue; shut[k] = 1;
+      if (k === goal) { found = true; break; }
+      const i = k % nx, j = (k / nx) | 0;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const a = i + di, b = j + dj;
+        if (!standAt(a, b) || (di && dj && (!standAt(i + di, j) || !standAt(i, j + dj)))) continue;
+        const nk = key(a, b), ng = g[k] + (di && dj ? Math.SQRT2 : 1);
+        if (ng < g[nk]) { g[nk] = ng; from[nk] = k; push(ng + h(a, b), nk); }
+      }
+    }
+    if (!found) return null;
+    const cells = []; for (let k = goal; k !== -1; k = from[k]) cells.push(centre(k % nx, (k / nx) | 0));
+    cells.reverse();
+    if (clear(tx, ty)) cells[cells.length - 1] = [tx, ty];
+    const path = []; let a = [pos.x, pos.y], i = 0;
+    while (i < cells.length) {
+      let j = cells.length - 1;
+      while (j > i && !sight(a, cells[j])) j--;
+      path.push(cells[j]); a = cells[j]; i = j + 1;
+    }
+    return path;
+  }
   const pos = { x: 0, y: 0 };
   let yaw = 0, pitch = -0.05;
   function place() {
@@ -99,11 +185,16 @@ export function createWalk(api, { onChange } = {}) {
     const r = api.roomAt(pos.x, pos.y);
     if (r) onChange?.(r);
   }
-  // one step, sliding along a wall rather than stopping dead against it
+  // One step. Against a wall or a door frame it slides: first along the axes, then
+  // turned up to 70 degrees either way, so walking at a doorway slips you into it.
   function step(dx, dy) {
     if (clear(pos.x + dx, pos.y + dy)) { pos.x += dx; pos.y += dy; return true; }
-    if (Math.abs(dx) > 1e-4 && clear(pos.x + dx, pos.y)) { pos.x += dx; return true; }
-    if (Math.abs(dy) > 1e-4 && clear(pos.x, pos.y + dy)) { pos.y += dy; return true; }
+    const l = Math.hypot(dx, dy);
+    for (const a of [0.35, -0.35, 0.7, -0.7, 1.2, -1.2]) {
+      const c = Math.cos(a), sn = Math.sin(a), k = Math.max(0.3, c);
+      const ex = (dx * c - dy * sn) * k, ey = (dx * sn + dy * c) * k;
+      if (l > 1e-5 && clear(pos.x + ex, pos.y + ey)) { pos.x += ex; pos.y += ey; return true; }
+    }
     return false;
   }
   // camera yaw 0 looks down world -z, which is plan +y
@@ -130,21 +221,21 @@ export function createWalk(api, { onChange } = {}) {
     }
     return { x: p.x + CX, y: CY - p.z };
   }
-  const onDown = (e) => { if (!on || e.button !== 0) return; e.stopImmediatePropagation(); down = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; try { el.setPointerCapture(e.pointerId); } catch {} };
+  const onDown = (e) => { if (!on || e.button !== 0) return; e.stopImmediatePropagation(); down = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false, slop: e.pointerType === 'touch' ? 12 : 4 }; try { el.setPointerCapture(e.pointerId); } catch {} };
   const onMove = (e) => {
     if (!on) return;
     e.stopImmediatePropagation();
     if (down) {
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
-      if (!down.moved && Math.hypot(dx, dy) < 4) return;
+      if (!down.moved && Math.hypot(dx, dy) < down.slop) return;   // a finger wobbles; that is still a tap
       down.moved = true; marker.visible = false;
       // the view turns the way you drag: right looks right, up looks up
       yaw = down.yaw - dx * 0.0045; pitch = Math.max(-1.2, Math.min(1.2, down.pitch - dy * 0.0045));
       place(); api.wake(2);
       return;
     }
-    const t = target(e);
-    marker.visible = !!t && walkable(t.x, t.y);
+    const t = grid && target(e);
+    marker.visible = !!t && !!nearest(...cell(t.x, t.y));
     if (marker.visible) { const c = W(t.x, t.y); marker.position.set(c.x, 0.02, c.z); }
     api.wake(2);
   };
@@ -154,7 +245,8 @@ export function createWalk(api, { onChange } = {}) {
     const d = down; down = null;
     if (!d || d.moved) return;
     const t = target(e);
-    if (t && walkable(t.x, t.y)) glide = t;
+    const path = t && route(t.x, t.y);
+    if (path?.length) glide = path;
   };
   for (const [n, f] of [['pointerdown', onDown], ['pointermove', onMove], ['pointerup', onUp]]) el.addEventListener(n, f, true);
   const MOVE = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
@@ -182,13 +274,14 @@ export function createWalk(api, { onChange } = {}) {
     if (keys.has('d')) { mx += rx; my += ry; }
     if (keys.has('a')) { mx -= rx; my -= ry; }
     if (mx || my) { const l = Math.hypot(mx, my); step(mx / l * SPEED * dt, my / l * SPEED * dt); moved = true; }
-    if (glide) {
-      const gx = glide.x - pos.x, gy = glide.y - pos.y, l = Math.hypot(gx, gy), s = Math.min(l, 1.8 * dt);
-      if (l < 0.03 || !step(gx / l * s, gy / l * s)) glide = null;
-      else {                                   // turn gently toward where you are going
-        const want = Math.atan2(-gx, gy);
+    if (glide) {                               // follow the route, waypoint by waypoint
+      const [wx, wy] = glide[0], gx = wx - pos.x, gy = wy - pos.y, l = Math.hypot(gx, gy), s = Math.min(l, 1.8 * dt);
+      if (l < 0.02) { glide.shift(); if (!glide.length) glide = null; }
+      else {
+        pos.x += gx / l * s; pos.y += gy / l * s;
+        const want = Math.atan2(-gx, gy);          // turn gently toward where you are going
         let dyaw = want - yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
-        if (l > 0.6) yaw += dyaw * Math.min(1, 3 * dt);
+        if (l > 0.4 || glide.length > 1) yaw += dyaw * Math.min(1, 3 * dt);
       }
       moved = true;
     }
@@ -226,6 +319,7 @@ export function createWalk(api, { onChange } = {}) {
     if (on) return;
     before = api.focused;
     const room = api.focused;
+    if (!grid) buildGrid();
     if (api.focused) api.showFlat();           // every room visible, nothing cut away
     api.walking = on = true;
     raise();
@@ -244,5 +338,7 @@ export function createWalk(api, { onChange } = {}) {
     const back = before; before = null;
     if (back) api.focusRoom(back); else { api.showFlat(); }
   }
-  return { enter, exit, get on() { return on; } };
+  // walk to a plan point along a route (what a tap does), and where you stand now
+  const routeTo = (x, y) => { const path = route(x, y); if (path?.length) { glide = path; api.wake(2); } return path?.length || 0; };
+  return { enter, exit, routeTo, get on() { return on; }, get at() { return { ...pos }; } };
 }

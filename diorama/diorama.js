@@ -861,6 +861,26 @@ const labels = zone.rooms.filter(r => r.id !== 'wiw').map(r => {
   labelHost.appendChild(el);
   return { r, el, p: W(...r.label_xy).setY(1.0) };
 });
+// On a phone the labels would pile up over a small model: a strip of room chips
+// stands in for them (index.html shows it only on narrow screens).
+const chipHost = document.getElementById('chips');
+const CHIP_ORDER = ['living', 'dining', 'kitchen', 'master', 'bed1', 'bed2', 'bed3', 'balcony', 'entrance', 'lobby', 'store', 'tlt1', 'tlt2', 'tlt3', 'tlt4'];
+const chips = [['flat', 'Whole flat', null], ...CHIP_ORDER.map(id => zone.rooms.find(r => r.id === id)).filter(Boolean).map(r => [r.id, r.name, r])].map(([id, name, r]) => {
+  const b = document.createElement('button');
+  b.textContent = name; b.dataset.room = id;
+  b.onclick = () => (r ? focusRoom(r) : showFlat());
+  chipHost.appendChild(b);
+  return b;
+});
+function markChips(f) {
+  for (const b of chips) {
+    const id = b.dataset.room;
+    b.classList.toggle('on', f ? (f.members ? f.members.includes(id) : f.id === id) : id === 'flat');
+  }
+  const on = chips.find(b => b.classList.contains('on'));
+  on?.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+}
+focusHooks.push(markChips); markChips(null);
 const tmp = new THREE.Vector3();
 function placeLabels() {
   if (walking) return;
