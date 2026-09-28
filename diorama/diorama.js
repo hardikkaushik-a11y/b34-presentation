@@ -455,7 +455,7 @@ if (t3) {
     m.userData.wall = { z0: 0, z1: CUT, cx: (o[i][0] + o[i + 1][0]) / 2, cy: (o[i][1] + o[i + 1][1]) / 2 };
     clad.add(m);
   }
-  clad.userData.cladding = true;
+  clad.userData.cladding = true; clad.userData.room = 'tlt3';
   scene.add(clad);
 }
 
@@ -777,7 +777,7 @@ function cutaway(force) {
   const d = new THREE.Vector3().subVectors(camera.position, controls.target); d.y = 0; d.normalize();
   const px = d.x, py = -d.z;
   // the active shell's walls and glass, plus Toilet 3's marble cladding
-  const cands = [...activeShell().children, ...(t3clad && t3clad.visible ? t3clad.children : [])];
+  const cands = [...activeShell().children, ...scene.children.filter(o => o.userData.cladding && o.visible).flatMap(o => o.children)];
   const low = [];
   cands.forEach((m, i) => {
     const info = m.userData.wall || m.userData.glass;
@@ -858,6 +858,8 @@ function fitView(ring, off) {
     u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
   }
   const w = host.clientWidth, h = host.clientHeight, fw = camera.right - camera.left, fh = camera.top - camera.bottom;
+  // a canvas with no size yet (mid-resize, a hidden tab) cannot be framed: stay put
+  if (!(w > 0 && h > 0) || !(u1 > u0) || !(v1 > v0)) return { t: controls.target.clone(), zoom: camera.zoom };
   const freeW = Math.max(200, w - safe.left - safe.right), freeH = Math.max(200, h - safe.top - safe.bottom);
   const zoom = Math.min(controls.maxZoom, Math.max(controls.minZoom,
     0.94 * Math.min((freeW / w) * fw / (u1 - u0), (freeH / h) * fh / (v1 - v0))));
@@ -894,7 +896,7 @@ async function focusRoom(r) {
   shell.visible = false;
   for (const g of pieceGroups) g.visible = members.includes(g.userData.home) && !g.userData.removed;
   for (const [id, root] of Object.entries(modelRoots)) root.visible = members.includes(id);
-  if (t3clad) t3clad.visible = members.includes('tlt3');
+  for (const g of scene.children) if (g.userData.cladding) g.visible = members.includes(g.userData.room) && !g.userData.off;
   labels.forEach(l => l.el.hidden = true);
   titleK.textContent = 'B-34 · Dwarka · The flat'; titleH.textContent = r.name;
   back.hidden = false;
@@ -911,7 +913,7 @@ function showFlat() {
   shell.visible = true;
   for (const g of pieceGroups) g.visible = !g.userData.removed;
   for (const root of Object.values(modelRoots)) root.visible = true;
-  if (t3clad) t3clad.visible = true;
+  for (const g of scene.children) if (g.userData.cladding) g.visible = !g.userData.off;
   labels.forEach(l => l.el.hidden = false);
   titleK.textContent = 'B-34 · Dwarka'; titleH.textContent = 'The flat';
   back.hidden = true;
@@ -1030,6 +1032,12 @@ renderer.setAnimationLoop(() => {
     camera.zoom = tween.z0 + (tween.z1 - tween.z0) * e; camera.updateProjectionMatrix();
     if (k >= 1) tween = null;
   }
+  if (!Number.isFinite(camera.position.x + camera.position.y + camera.position.z + camera.zoom + controls.target.x)) {
+    // never leave the model lost: a bad frame resets to the home view
+    tween = null; camera.zoom = 1; controls.target.set(0, 0.6, 0);
+    camera.position.set(Math.sin(ISO_AZ) * Math.cos(ISO_EL), Math.sin(ISO_EL), Math.cos(ISO_AZ) * Math.cos(ISO_EL)).multiplyScalar(40);
+    camera.updateProjectionMatrix(); wake(3);
+  }
   if (controls.update()) moving = true;
   // a hook that throws must never stop the model from drawing
   for (const f of frameHooks) { try { if (f()) wake(1); } catch (e) { if (!f.failed) console.error(e); f.failed = true; } }
@@ -1049,7 +1057,7 @@ export const api = {
   inRing, inWall, prism, mesh, rbox, pieces, pieceGroups, placePiece, models, modelRoots,
   sun, hemi, fill, placeSun, dirtyShadows, wake, lightHooks, frameHooks, tip, spaces, safe,
   focusHooks, setCurtainsOpen, hasCurtains, curtainRooms,
-  fitView, focusRoom, showFlat, activeShell, resetView: () => (focused ? focusRoom(focused) : showFlat()),
+  fitView, focusRoom, showFlat, activeShell, recut: () => { lastKey = ''; cutaway(true); }, resetView: () => (focused ? focusRoom(focused) : showFlat()),
   get focused() { return focused; }, get studioOn() { return studioOn; },
 };
 window.__diorama = api;

@@ -192,7 +192,7 @@ export function limewash({ base, seed = 31 }) {
 }
 
 // Travertine: warm banded stone with small elongated pores, laid in tiles.
-export function travertine({ base, tile = 0.6, seed = 37 }) {
+export function travertine({ base, tile = 0.6, seed = 37, joint = true }) {
   const N = 512, [c, x] = canvas(N), n = noise2(seed, 3), r = rng(seed);
   const img = x.createImageData(N, N), B = new THREE.Color(base);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
@@ -208,7 +208,7 @@ export function travertine({ base, tile = 0.6, seed = 37 }) {
     x.beginPath(); x.ellipse(r() * N, r() * N, 2 + r() * 7, 0.8 + r() * 1.4, (r() - 0.5) * 0.2, 0, Math.PI * 2); x.fill();
   }
   x.globalAlpha = 1;
-  x.strokeStyle = shade(base, 0.72); x.lineWidth = 1.5; x.strokeRect(0.75, 0.75, N - 1.5, N - 1.5);
+  if (joint) { x.strokeStyle = shade(base, 0.72); x.lineWidth = 1.5; x.strokeRect(0.75, 0.75, N - 1.5, N - 1.5); }
   return finish(c, tile);
 }
 

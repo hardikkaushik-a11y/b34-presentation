@@ -8,6 +8,7 @@
 // every finish is a concept option, every moved piece is marked as moved from her
 // layout and can be put back, and her four bedrooms and Toilet 3 cannot be touched.
 import { api } from './diorama.js';
+import { createProducts } from './products.js';
 import { marble, wood, fabric, shutter, paint, terrazzo, boucle, velvet, leather, limewash, travertine,
          normalFrom, swatchURL } from './textures.js';
 
@@ -126,7 +127,7 @@ function finishFor(s, slot) {
   return f;
 }
 
-const state = { f: {}, t: 10.5, c: {} };
+const state = { f: {}, t: 10.5, c: {}, p: {} };
 const DEFAULT_T = 10.5;
 function setSlot(slot, id) {
   const s = SAMPLE[id], m = M[SLOTS[slot].mat];
@@ -201,6 +202,11 @@ const CATALOGUE = [
   { type: 'floor_lamp', name: 'Floor lamp', w: 0.45, d: 0.45 },
   { type: 'plant', name: 'Plant', w: 0.6, d: 0.6 },
 ];
+
+// ------------------------------------------------------------------ real products
+// Kohler basins and rain showers, the balcony and washroom tiles, dining sets: see
+// products.js. Their choices sit in state.p (keys like 'basin.tlt1'), in the link.
+const PR = createProducts(api);
 
 // ------------------------------------------------------------------ furniture rules
 // A piece has to stand inside a room that is open to change (not her bedrooms, not
@@ -375,6 +381,8 @@ function serialize() {
     else if (p.moved) m[p.id] = [r3(q.cx), r3(q.cy), deg(q)];
   }
   if (Object.keys(f).length) s.f = f;
+  const pp = {}; for (const k in PR.DEFAULTS) if (state.p[k] && state.p[k] !== PR.DEFAULTS[k]) pp[k] = state.p[k];
+  if (Object.keys(pp).length) s.p = pp;
   if (Math.abs(state.t - DEFAULT_T) > 1e-3) s.t = Math.round(state.t * 100) / 100;
   const c = Object.keys(state.c).filter(rid => state.c[rid]);
   if (c.length) s.c = c;
@@ -400,9 +408,27 @@ function applyState(s, { furniture = true } = {}) {
       g.userData.removed = !!s.x?.includes(p.id);
     }
     for (const [type, cx, cy, d] of s.a || []) addPiece(type, { cx, cy, angle: THREE.MathUtils.degToRad(d) });
-    refreshVisibility();
   }
+  state.p = { ...PR.DEFAULTS, ...(s.p || {}) };
+  PR.apply(state.p);
+  if (furniture) { arrangeChairs(s.m || {}); refreshVisibility(); }
   relight();
+}
+// a round table seats its chairs around it; any chair the viewer placed stays put
+function arrangeChairs(userMoves = {}) {
+  const table = pieceGroups.find(g => g.userData.piece.type === 'dining_table')?.userData.piece;
+  if (!table) return;
+  const chairs = pieceGroups.filter(g => g.userData.piece.type === 'dining_chair' && !g.userData.removed &&
+    Math.hypot(g.userData.piece.obb.cx - table.obb.cx, g.userData.piece.obb.cy - table.obb.cy) < 1.6);
+  const round = state.p.table === 'travertine_round';
+  const poses = round ? PR.roundChairPoses(table, chairs.map(g => g.userData.piece)) : null;
+  chairs.forEach((g, i) => {
+    const p = g.userData.piece;
+    if (userMoves[p.id]) return;
+    setPose(g, round ? poses[i] : { cx: p.obb.cx, cy: p.obb.cy, angle: p.obb.angle });
+    p.moved = false;                   // part of the table choice, not a move
+  });
+  api.dirtyShadows();
 }
 const b64 = { enc: (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
               dec: (s) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))) };
@@ -609,7 +635,7 @@ ui.innerHTML = `
     <p class="fine">Sun path for Delhi, approximate. Drag the sun along its arc.</p>
   </section>
   <section class="panel dock">
-    <div class="tabs">${CATS.map(([k, n]) => `<button data-cat="${k}">${n}</button>`).join('')}<span class="sep"></span><button data-cat="furniture">Furniture</button>
+    <div class="tabs">${CATS.map(([k, n]) => `<button data-cat="${k}">${n}</button>`).join('')}<span class="sep"></span><button data-cat="furniture">Furniture</button><button data-cat="products">Products</button>
       <span class="target" hidden><span></span><button title="Clear">×</button></span></div>
     <div class="tray"></div>
   </section>
@@ -652,6 +678,7 @@ function swatchFor(s) {
 function renderTray() {
   const tray = $('.tray', ui);
   tray.innerHTML = '';
+  if (tab === 'products') return renderProducts(tray);
   if (tab === 'furniture') {
     for (const c of CATALOGUE) {
       const b = document.createElement('button');
@@ -1096,7 +1123,7 @@ function refreshBoard() {
   anchorKey = '';                    // re-lay on the next frame
 }
 api.focusHooks.push((f) => {
-  document.body.classList.toggle('locked-room', !!(f && !f.members && (f.model || f.designed)));
+  document.body.classList.toggle('locked-room', !!(f && !f.members && f.model));
   anchorAz = null; anchorKey = '';
 });
 function layoutOverlay() {
@@ -1136,6 +1163,83 @@ function layoutOverlay() {
 }
 api.frameHooks.push(() => { layoutOverlay(); });
 addEventListener('resize', () => { anchorKey = ''; anchorAz = null; });
+
+// ------------------------------------------------------------------ products tab
+// The choices for what is on screen: the dining set in the living space, the basin,
+// shower and finish in a washroom, tiles on the balcony and in the master washroom.
+const METAL = { chrome: '#D9DCDF', bronze: '#7E5C3E', black: '#1E1E1E', gold: '#C9A35C' };
+const productThumbs = new Map();
+function productPic(key, id) {
+  const k = key.split('.')[0];
+  if (k === 'finish') return `background:${METAL[id]}`;
+  if (k === 't3walls' || k === 'balconyFloor' || k === 'balconyWall') {
+    if (k === 't3walls' && id === 'marble') return `background-image:url(${swatchURL(M.tlt3wall.map, 112)})`;
+    if (k === 'balconyFloor' && id === 'plain') return `background-image:url(${swatchURL(M.floor.map, 112)})`;
+    if (k === 'balconyWall' && id === 'paint') return `background-image:url(${swatchURL(M.walls.map, 112)})`;
+    const name = { geode: 'geode', emerald: 'emerald', patterned: 'encaustic', plain: 'plainGrey' }[id];
+    return `background-image:url(${swatchURL(PR.tile(name).map, 112)})`;
+  }
+  const t = productThumbs.get(k + ':' + id);
+  return t ? `background-image:url(${t})` : '';
+}
+function visibleGroups() {
+  const f = api.focused, members = f ? (f.members || [f.id]) : null;
+  return PR.GROUPS.filter(g => members ? g.rooms.some(r => members.includes(r)) : ['table', 'chair', 'balconyFloor', 'balconyWall'].includes(g.key));
+}
+function renderProducts(tray) {
+  const groups = visibleGroups();
+  if (!groups.length) { tray.innerHTML = '<p class="pnote">Nothing to choose in this room yet. Open the living space, a washroom or the balcony.</p>'; return; }
+  for (const g of groups) {
+    const box = document.createElement('div'); box.className = 'pgroup';
+    box.innerHTML = `<small>${g.label}</small><div class="opts"></div>`;
+    for (const o of g.options) {
+      const b = document.createElement('button');
+      b.className = 'popt' + ((state.p[g.key] || PR.DEFAULTS[g.key]) === o.id ? ' on' : '');
+      b.innerHTML = `<span class="pic" style="${productPic(g.key, o.id)}"></span><b>${o.name}</b>${o.note ? `<small>${o.note}</small>` : ''}`;
+      b.onclick = () => chooseProduct(g, o);
+      box.querySelector('.opts').appendChild(b);
+    }
+    tray.appendChild(box);
+  }
+  if (!api.focused) tray.insertAdjacentHTML('beforeend', '<p class="pnote">Open a washroom for its basin, shower and finish.</p>');
+  makeProductThumbs(groups);
+}
+function chooseProduct(g, o) {
+  state.p[g.key] = o.id;
+  PR.apply(state.p);
+  if (g.key === 'table') arrangeChairs(JSON.parse(current || '{}').m || {});
+  commit(); renderTray();
+  toast(`${g.label}: ${o.name}`);
+}
+let thumbBusy = false;
+async function makeProductThumbs(groups) {
+  if (thumbBusy) return;
+  const todo = groups.flatMap(g => g.options.map(o => [g.key, o.id])).filter(([k, id]) => {
+    const kk = k.split('.')[0]; return ['table', 'chair', 'basin', 'shower'].includes(kk) && !productThumbs.has(kk + ':' + id);
+  });
+  if (!todo.length) return;
+  thumbBusy = true;
+  const tr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  tr.setPixelRatio(2); tr.setSize(76, 60); tr.toneMapping = THREE.ACESFilmicToneMapping;
+  const ts = new THREE.Scene();
+  ts.add(new THREE.HemisphereLight(0xFFF4E6, 0x3A3028, 1.6));
+  const dl = new THREE.DirectionalLight(0xFFFFFF, 2.4); dl.position.set(2, 4, 3); ts.add(dl);
+  const cam = new THREE.PerspectiveCamera(26, 76 / 60, 0.05, 60);
+  for (const [key, id] of todo) {
+    const t = PR.thumbPiece(key, id); if (!t) continue;
+    const g = t.build(t.p); ts.add(g);
+    const box = new THREE.Box3().setFromObject(g), ctr = box.getCenter(new V3()), R = box.getSize(new V3()).length() / 2;
+    cam.position.copy(ctr).add(new V3(0.85, 0.9, 1.15).normalize().multiplyScalar(R / Math.sin(THREE.MathUtils.degToRad(13)) * 0.92));
+    cam.lookAt(ctr); tr.render(ts, cam);
+    productThumbs.set(key.split('.')[0] + ':' + id, tr.domElement.toDataURL());
+    ts.remove(g);
+    await new Promise(r => setTimeout(r, 0));
+  }
+  tr.dispose(); tr.forceContextLoss();
+  thumbBusy = false;
+  if (tab === 'products') renderTray();
+}
+api.focusHooks.push(() => { if (tab === 'products') renderTray(); });
 
 // ------------------------------------------------------------------ furniture thumbnails
 // Each catalogue piece is rendered once, on a small separate renderer, then thrown away.
