@@ -624,7 +624,7 @@ ui.innerHTML = `
     <button data-t="undo" title="Undo (⌘Z)">${icon('undo')}</button><button data-t="redo" title="Redo (⇧⌘Z)">${icon('redo')}</button>
     <span></span>
     <button data-t="save" title="Save an image">${icon('save')}</button><button data-t="link" title="Copy a link to this setup">${icon('link')}</button>
-    <button data-t="hide" title="Show or hide the moodboard and sun path (N)">${icon('hide')}</button><button data-t="reset" title="Reset the view (R)">${icon('reset')}</button>
+    <button data-t="hide" title="Show or hide the moodboard (N)">${icon('hide')}</button><button data-t="reset" title="Reset the view (R)">${icon('reset')}</button>
     <button data-t="help" title="How it works (?)">${icon('help')}</button>
   </nav>
   <section class="panel daylight">
@@ -655,7 +655,7 @@ ui.innerHTML = `
     <h3>Mood</h3>
     <p>The meter reads the room as you change it: pale surfaces and high sun read bright, warm soft materials and low gold light read cozy, dark surfaces and night read moody. A rule of thumb, not a science.</p>
     <h3>Keys</h3>
-    <p class="keys">1-4 presets · [ ] move the sun · , . turn the selected piece · Delete take it out · ⌘Z undo · / hide the interface · R reset the view · Esc deselect</p>
+    <p class="keys">1-4 presets · [ ] move the sun · N show the moodboard · , . turn the selected piece · Delete take it out · ⌘Z undo · / hide the interface · R reset the view · Esc deselect</p>
   </dialog>`;
 document.body.appendChild(ui);
 
@@ -1060,7 +1060,11 @@ orb.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation();
   try { orb.setPointerCapture(e.pointerId); } catch {}
   sunDrag = { moon: state.t > SET }; timeAnim = null;
+  document.body.classList.add('sun-live');
 });
+// the arc is only drawn while the sun is in hand (or the pointer rests on it)
+orb.addEventListener('pointerenter', () => document.body.classList.add('sun-live'));
+orb.addEventListener('pointerleave', () => { if (!sunDrag) document.body.classList.remove('sun-live'); });
 orb.addEventListener('pointermove', (e) => {
   if (!sunDrag) return;
   const A = skyArc();
@@ -1072,7 +1076,7 @@ orb.addEventListener('pointermove', (e) => {
   state.t = sunDrag.moon ? Math.min(22, Math.max(SET, best + 12)) : best;
   relight(); refresh();
 });
-const endSunDrag = () => { if (sunDrag) { sunDrag = null; commit(); } };
+const endSunDrag = () => { if (sunDrag) { sunDrag = null; document.body.classList.remove('sun-live'); commit(); } };
 orb.addEventListener('pointerup', endSunDrag);
 orb.addEventListener('pointercancel', endSunDrag);
 
@@ -1287,6 +1291,9 @@ current = JSON.stringify(serialize());
 setTab('wood');
 refresh();
 document.body.classList.add('configurator');
+// Calm by default, like Ryan Sael's room: the moodboard cards and their threads wait
+// behind the eye button (or N).
+document.body.classList.add('no-board');
 for (const k in SLOTS) spreadable(M[SLOTS[k].mat]);
 // compile the finishes' shaders in parallel before drawing with them, instead of
 // stalling the page on the first frame

@@ -39,6 +39,9 @@
   .room:hover { background:rgba(201,162,39,.25); border-color:var(--brass); }
   .room i { display:block; font-style:normal; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--brass); margin-top:2px; }
   .room[hidden] { display:none; }
+  /* small rooms keep their names until the pointer is over them */
+  .room.minor { opacity:0; pointer-events:none; transition:opacity .25s, background .2s, border-color .2s; }
+  .room.minor.near { opacity:1; pointer-events:auto; }
   #back { position:fixed; left:28px; top:104px; padding:8px 14px; border-radius:999px; cursor:pointer;
           border:1px solid var(--brass); background:rgba(20,17,14,.7); color:var(--ink); font:500 12px "Avenir Next",Avenir,sans-serif; }
   #back:hover { background:rgba(201,162,39,.2); }
@@ -155,6 +158,9 @@
   /* the sun's arc and the moodboard threads */
   .sky { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; overflow:visible; }
   .sky .arc { fill:none; stroke:rgba(255,232,190,.7); stroke-width:1.6; stroke-dasharray:4 7; }
+  /* calm by default: the arc and its hours show only while the sun is held or hovered */
+  .sky .arc, .sky .ticks { opacity:0; transition:opacity .35s; }
+  body.sun-live .sky .arc, body.sun-live .sky .ticks { opacity:1; }
   .sky .ticks circle { fill:rgba(255,236,200,.55); }
   .sky .ticks text { fill:rgba(255,236,200,.6); font:500 10px "Avenir Next",Avenir,sans-serif; text-anchor:middle; letter-spacing:.04em; }
   .sky .links line { stroke:rgba(242,237,228,.4); stroke-width:1; }
@@ -176,7 +182,7 @@
   .mb-card b { display:block; margin-top:5px; font-size:10.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .mb-card small { display:block; font-size:8.5px !important; letter-spacing:.12em; text-transform:uppercase; }
   .mb-card:hover, .mb-card.on { border-color:var(--brass) !important; }
-  body.no-board .sky, body.no-board .board { display:none; }
+  body.no-board .sky .links, body.no-board .board { display:none; }
   body.locked-room .board, body.locked-room .mood, body.locked-room .dock, body.locked-room .sky .links { display:none; }
   body.clean #ui > *:not(.tools):not(dialog), body.clean .credit, body.clean #labels, body.clean #back, body.clean .title { display:none !important; }
   @media (max-width:1180px) {
@@ -203,7 +209,6 @@
 <div class="credit" id="credit">Ar. Shivangi Kaushik · Studio Spindle</div>
 <div class="hint">Click a room to open it · Drag to orbit · Scroll to zoom</div>
 <div id="tip" hidden></div>
-<script src="./rooms-materials.js"></script>
 <script src="../rooms-tour.js"></script>
 <script type="module" src="./diorama.js"></script>
 <script type="module" src="./configurator.js"></script>
