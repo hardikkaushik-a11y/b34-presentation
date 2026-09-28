@@ -138,8 +138,8 @@ export function createWalk(api, { onChange } = {}) {
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (!down.moved && Math.hypot(dx, dy) < 4) return;
       down.moved = true; marker.visible = false;
-      // grab the view and turn it, like a panorama
-      yaw = down.yaw + dx * 0.0045; pitch = Math.max(-1.2, Math.min(1.2, down.pitch + dy * 0.0045));
+      // the view turns the way you drag: right looks right, up looks up
+      yaw = down.yaw - dx * 0.0045; pitch = Math.max(-1.2, Math.min(1.2, down.pitch - dy * 0.0045));
       place(); api.wake(2);
       return;
     }
