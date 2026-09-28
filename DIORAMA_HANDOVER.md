@@ -104,12 +104,37 @@ sale price on 2026-09-28 and can change. It has its own builder with these.
   600 x 600 x 850 mm. Prices are not on LG's pages and are not shown.
 
 
+### Bedroom 3 to the balcony
+
+- Her window bay (floor, glass, drapes along it) is added past the drawing's room line,
+  the strip beside it becomes balcony floor, and a thin black-framed sliding door stands
+  between them. Hover names it; a click slides it open and takes you through, both ways.
+
+### Borrowed from Construct (construct.aswinnair.com), rebuilt in our own code
+
+- Walk mode (`diorama/walk.js`, the walking figure in the toolbar): eye height 1.55 m in
+  the room on screen. Drag to look, tap the floor to walk there, WASD or arrow keys, Esc
+  or Back to plan. Walls rise to a 2.85 m ceiling, lintels close over doors and windows,
+  door leaves are hidden so doorways are open, the Bedroom 3 sliding door opens as you
+  come near. No collision with furniture, only walls.
+- Room areas: the title shows the open room's floor area (m² and sq ft) and the flat's
+  total (about 184.5 m², 1,986 sq ft, from the drawing's room outlines, not surveyed);
+  labels show each room's area on hover.
+- Furniture moves: pieces pull flush to a wall within 15 cm, Option (Alt) places freely,
+  a dot beside a selected piece turns it (15 degree steps, free with Option), the reason
+  a move is refused shows by the pointer, and the card shows the piece's size in metres
+  and feet and inches.
+- Library: 15 more pieces (pooja unit, bookshelf, sideboard, console, study desk, desk
+  chair, nightstand, dresser, ottoman, chaise, sun lounger, floor vase, upright piano,
+  crib, shoe cabinet) wearing the flat's shared finishes, and a search box.
+
 ## Still open
 
 1. Hardik to review the rooms against her renders (`/diorama/`, click each bedroom).
 2. Real products for bedroom pieces (beds, chairs, lamps) need names from her or a
    sourcing pass; none are invented.
-3. Phone layout of the diorama is still broken (labels pile up, panels overlap).
+3. Phone layout of the diorama is still broken (labels pile up, panels overlap). Walk
+   mode works by touch (drag, tap) but has no on-screen movement buttons.
 4. Her DXF and `assets/diorama/layout.json` would let the bedroom boxes be checked
    against the drawing instead of her draft-registered GLBs.
 5. Merge to `main` (goes live) only on Hardik's explicit yes.

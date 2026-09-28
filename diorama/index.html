@@ -39,6 +39,10 @@
   .room:hover { background:rgba(201,162,39,.25); border-color:var(--brass); }
   .room i { display:block; font-style:normal; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--brass); margin-top:2px; }
   .room[hidden] { display:none; }
+  .title .area { margin-top:5px; font-size:12px; letter-spacing:.03em; color:var(--dim); }
+  /* a room's area shows on its label only while hovered */
+  .room i { display:none !important; }
+  .room:hover i { display:block !important; }
   /* small rooms keep their names until the pointer is over them */
   .room.minor { opacity:0; pointer-events:none; transition:opacity .25s, background .2s, border-color .2s; }
   .room.minor.near { opacity:1; pointer-events:auto; }
@@ -121,12 +125,23 @@
   .tray .item .pic { width:76px; height:60px; background:rgba(242,237,228,.04); box-shadow:none; }
   .tray .item img { width:76px; height:60px; display:block; }
   .tray small { font-size:10.5px; color:var(--ink) !important; white-space:nowrap; }
+  .tray .lib-search { flex:0 0 150px; align-self:center; margin:0 4px 0 2px; padding:8px 11px; border-radius:10px;
+                      border:1px solid var(--line); background:rgba(242,237,228,.05); color:var(--ink); font:12px "Avenir Next",Avenir,sans-serif; }
+  .tray .lib-search:focus { outline:none; border-color:var(--brass); }
+  .tray button[hidden], .tray .pnote[hidden] { display:none; }
   .tray .sw.used small::before { content:"• "; color:var(--brass); }
   .card { left:50%; transform:translateX(-50%); bottom:150px; display:flex; align-items:center; gap:4px; padding:7px 8px 7px 14px; }
   .card[hidden] { display:none; }
   .card .who { margin-right:8px; }
   .card .who b { display:block; font-size:12.5px; font-weight:600; }
   .card .who small { font-size:10.5px; }
+  .why { position:fixed; left:0; top:0; z-index:7; pointer-events:none; padding:5px 10px; border-radius:999px;
+         background:rgba(20,17,14,.9); border:1px solid rgba(210,85,63,.7); font-size:11.5px; white-space:nowrap; }
+  .why[hidden] { display:none; }
+  #ui .turn-dot { position:fixed; left:0; top:0; z-index:4; width:18px; height:18px; border-radius:50%; cursor:grab; padding:0;
+              background:#F2EDE4 !important; border:2px solid var(--brass) !important; box-shadow:0 2px 8px rgba(0,0,0,.45); }
+  #ui .turn-dot:active { cursor:grabbing; }
+  #ui .turn-dot[hidden] { display:none; }
   .card button { padding:6px 11px; border-radius:9px !important; font-size:12px !important; border:1px solid var(--line) !important; }
   .card button:hover { border-color:var(--brass) !important; }
   .card button[hidden] { display:none; }
@@ -184,6 +199,15 @@
   .mb-card:hover, .mb-card.on { border-color:var(--brass) !important; }
   body.no-board .sky .links, body.no-board .board { display:none; }
   body.locked-room .board, body.locked-room .mood, body.locked-room .dock, body.locked-room .sky .links { display:none; }
+  /* walking: the model's panels step aside for a hint bar */
+  #ui .walkbar { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:3; display:none; align-items:center; gap:14px;
+                 padding:8px 8px 8px 16px; border-radius:999px; background:var(--panel); border:1px solid var(--line);
+                 backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); font-size:12px; color:var(--dim); white-space:nowrap; }
+  #ui .walkbar button { padding:7px 14px; border-radius:999px !important; border:1px solid var(--brass) !important; color:var(--ink) !important; font-size:12px !important; }
+  body.walking #ui .walkbar { display:flex; }
+  body.walking .mood, body.walking .dock, body.walking .card, body.walking .board, body.walking .sky, body.walking #labels,
+  body.walking #back, body.walking .turn-dot, body.walking .why, body.walking .hint, body.walking #tip { display:none !important; }
+  body.walking .tools [data-t="walk"] { border-color:var(--brass) !important; background:rgba(201,162,39,.2) !important; }
   body.clean #ui > *:not(.tools):not(dialog), body.clean .credit, body.clean #labels, body.clean #back, body.clean .title { display:none !important; }
   @media (max-width:1180px) {
     .mood { display:none; }
@@ -202,7 +226,7 @@
 <body>
 <div id="stage"></div>
 <div class="load">Building the room</div>
-<div class="title"><div class="k" id="t-k">B-34 · Dwarka</div><h1 id="t-h">The flat</h1></div>
+<div class="title"><div class="k" id="t-k">B-34 · Dwarka</div><h1 id="t-h">The flat</h1><div class="area" id="t-a"></div></div>
 <button id="back" hidden>&larr; The whole flat</button>
 <div id="labels"></div>
 <div id="status"></div>

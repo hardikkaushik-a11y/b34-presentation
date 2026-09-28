@@ -257,7 +257,7 @@ function buildShell(group, { plinth, floor, walls, glass }) {
     const cut = w.z1 >= CUT - 1e-6;          // cut by the section: a dark cap, as in a model
     const m = prism(w.outer, w.holes, w.z0, w.z1, mat, cut ? M.section : cap);
     const cx = w.outer.reduce((a, q) => a + q[0], 0) / w.outer.length, cy = w.outer.reduce((a, q) => a + q[1], 0) / w.outer.length;
-    m.userData.wall = { z0: w.z0, z1: w.z1, cx, cy };
+    m.userData.wall = { z0: w.z0, z1: w.z1, cx, cy, kind: w.kind, outer: w.outer };
     group.add(m);
   }
   for (const g of glass) {
@@ -660,6 +660,7 @@ function activeShell() { return focusGroup || shell; }
 // the shadows they cast, flutter up and down.
 let lastAz = null;
 function cutaway(force) {
+  if (walking) return;                    // walking, every wall stands full height
   const az = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
   if (!force && lastAz !== null) {
     let dAz = Math.abs(az - lastAz); if (dAz > Math.PI) dAz = 2 * Math.PI - dAz;
@@ -777,6 +778,13 @@ function flyTo(ring, fromPlan) {
   tween = { t0: performance.now(), from: controls.target.clone(), to: t, z0: camera.zoom, z1: zoom, off0, off1, len };
 }
 const titleK = document.getElementById('t-k'), titleH = document.getElementById('t-h'), credit = document.getElementById('credit');
+const titleA = document.getElementById('t-a');
+// Floor areas from the room outlines (inside faces of her walls), in square metres and
+// square feet. Outlines are the drawing's, so the figures are close, not surveyed.
+function polyArea(ring) { let a = 0; for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1]; return Math.abs(a / 2); }
+const roomArea = (r) => (r.members ? r.members.map(id => zone.rooms.find(q => q.id === id)) : [r]).reduce((a, q) => a + polyArea(q.outline), 0);
+const areaText = (m2) => `${m2.toFixed(1)} m² · ${Math.round(m2 * 10.7639).toLocaleString('en-IN')} sq ft`;
+const flatArea = () => zone.rooms.reduce((a, r) => a + polyArea(r.outline), 0);
 const back = document.getElementById('back');
 // rooms that open into each other (foyer, living, dining) focus as one space
 // The washing machines stand in the balcony's utility end, which the drawing splits
@@ -812,7 +820,7 @@ async function focusRoom(r) {
   for (const low of Object.values(lowCopies)) low.visible = false;
   for (const g of scene.children) if (g.userData.cladding) g.visible = (g.userData.rooms || [g.userData.room]).some(id => members.includes(id)) && !g.userData.off;
   labels.forEach(l => l.el.hidden = true);
-  titleK.textContent = 'B-34 · Dwarka · The flat'; titleH.textContent = r.name;
+  titleK.textContent = 'B-34 · Dwarka · The flat'; titleH.textContent = r.name; titleA.textContent = areaText(roomArea(r));
   back.hidden = false;
   flyTo(r.island, r.view_from);
   studio(true);
@@ -830,7 +838,7 @@ function showFlat() {
   for (const root of Object.values(modelRoots)) root.visible = true;
   for (const g of scene.children) if (g.userData.cladding) g.visible = !g.userData.off;
   labels.forEach(l => l.el.hidden = false);
-  titleK.textContent = 'B-34 · Dwarka'; titleH.textContent = 'The flat';
+  titleK.textContent = 'B-34 · Dwarka'; titleH.textContent = 'The flat'; titleA.textContent = `about ${areaText(flatArea())} of floor`;
   back.hidden = true;
   flyTo(zone.zone, HOME_FROM);
   useRoomEnvironment(null);
@@ -839,7 +847,7 @@ function showFlat() {
   for (const hook of focusHooks) hook(null);
 }
 back.onclick = showFlat;
-addEventListener('keydown', e => { if (e.key === 'Escape' && focused) showFlat(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && focused && !walking) showFlat(); });
 
 // room labels over the flat; click one to isolate that room
 const labelHost = document.getElementById('labels');
@@ -848,13 +856,14 @@ const MINOR = new Set(['tlt1', 'tlt2', 'tlt3', 'tlt4', 'store', 'wiw', 'lobby', 
 const labels = zone.rooms.filter(r => r.id !== 'wiw').map(r => {
   const el = document.createElement('button');
   el.className = 'room' + (r.model ? ' designed' : '') + (MINOR.has(r.id) ? ' minor' : '');
-  el.textContent = r.name;
+  el.innerHTML = `${r.name}<i>${areaText(roomArea(r.space === 'balcony-all' ? spaces[r.space] : r))}</i>`;
   el.onclick = () => focusRoom(r);
   labelHost.appendChild(el);
   return { r, el, p: W(...r.label_xy).setY(1.0) };
 });
 const tmp = new THREE.Vector3();
 function placeLabels() {
+  if (walking) return;
   if (focused) return;
   const w = host.clientWidth, h = host.clientHeight;
   for (const l of labels) {
@@ -868,7 +877,7 @@ const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt || focused) return;
+  if (!downAt || focused || walking) return;
   if (Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -886,7 +895,7 @@ function roomAt(px, py) {
 // Clicking the door slides it open and takes you through: from Bedroom 3 to the balcony,
 // from anywhere else into Bedroom 3.
 renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (walking || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -899,6 +908,8 @@ renderer.domElement.addEventListener('pointerup', e => {
 let t3clad = scene.children.find(o => o.userData.cladding) || null;
 
 // ------------------------------------------------------------------ post
+let walking = false;
+const resizeHooks = [];
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const gtao = new GTAOPass(scene, camera, 1, 1);
@@ -908,6 +919,8 @@ gtao.blendIntensity = 0.85;
 composer.addPass(gtao);
 composer.addPass(new SMAAPass());
 composer.addPass(new OutputPass());
+// what the loop draws: the model view, or walk mode's own camera and passes
+let view = { camera, composer };
 
 // ------------------------------------------------------------------ sizing
 const zoneR = Math.max(...zone.zone.map(([x, y]) => Math.hypot(x - CX, y - CY)));
@@ -918,6 +931,7 @@ function resize() {
   else { const hw = zoneR * 0.92; camera.left = -hw; camera.right = hw; camera.top = hw / a; camera.bottom = -hw / a; }
   camera.updateProjectionMatrix();
   renderer.setSize(w, h); composer.setSize(w, h);
+  for (const f of resizeHooks) f(w, h);
 }
 addEventListener('resize', resize); resize();
 
@@ -927,6 +941,7 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let hovered = null;
 const floorHit = new THREE.Vector3();
 renderer.domElement.addEventListener('pointermove', (e) => {
+  if (walking) return;
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -978,16 +993,17 @@ renderer.setAnimationLoop(() => {
     camera.position.set(Math.sin(ISO_AZ) * Math.cos(ISO_EL), Math.sin(ISO_EL), Math.cos(ISO_AZ) * Math.cos(ISO_EL)).multiplyScalar(40);
     camera.updateProjectionMatrix(); wake(3);
   }
-  if (controls.update()) moving = true;
+  if (!walking && controls.update()) moving = true;
   // a hook that throws must never stop the model from drawing
   for (const f of frameHooks) { try { if (f()) wake(1); } catch (e) { if (!f.failed) console.error(e); f.failed = true; } }
   if (moving) wake(1);
   if (wakeFrames <= 0 || api.hold) return;
   wakeFrames--;
-  if (fill.intensity) { fill.position.copy(camera.position); fill.target.position.copy(controls.target); }
+  if (fill.intensity) { fill.position.copy(view.camera.position); if (!walking) fill.target.position.copy(controls.target); }
   placeLabels();
-  composer.render();
+  view.composer.render();
 });
+titleA.textContent = `about ${areaText(flatArea())} of floor`;
 document.body.classList.add('ready');
 
 // what the configurator (configurator.js) builds on
@@ -1006,6 +1022,10 @@ export const api = {
   sun, hemi, fill, placeSun, dirtyShadows, wake, lightHooks, frameHooks, tip, spaces, safe,
   focusHooks, setCurtainsOpen, hasCurtains, curtainRooms,
   bedroomSlots: bedrooms.slots, obstacles: bedrooms.obstacles,
+  // walk mode (walk.js): what it draws with, and the flat's walkable floor
+  get walking() { return walking; }, set walking(v) { walking = v; },
+  useView: (v) => { view = v || { camera, composer }; wake(3); }, resizeHooks, shell, labels, roomAt, setDoor: (t) => { doorTarget = t; wake(); },
+  walkFloors: [...zone.floor, { outer: BAY, holes: [] }],
   fitView, focusRoom, showFlat, activeShell, recut: () => { lastKey = ''; cutaway(true); }, resetView: () => (focused ? focusRoom(focused) : showFlat()),
   get focused() { return focused; }, get studioOn() { return studioOn; },
 };

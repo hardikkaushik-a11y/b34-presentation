@@ -10,6 +10,7 @@
 // changed room by room; Toilet 3 stays as she specified it.
 import { api } from './diorama.js';
 import { createProducts } from './products.js';
+import { createWalk } from './walk.js';
 import { marble, wood, fabric, shutter, paint, terrazzo, boucle, velvet, leather, limewash, travertine,
          normalFrom, swatchURL } from './textures.js';
 
@@ -230,18 +231,181 @@ B.plant = (p) => {
   }
   return g;
 };
+// ---- more of the library: pieces a flat like this one is furnished with, drawn in the
+// flat's own style and wearing its shared finishes (woodwork, upholstery, joinery).
+// Local +Z is the piece's front.
+const P = (g, w, h, d, x, y, z, mat, r = 0.008) => { const m = mesh(rbox(w, h, d, r), mat, x, y, z); g.add(m); return m; };
+const cyl = (g, r0, r1, h, x, y, z, mat, seg = 16) => { const m = mesh(new THREE.CylinderGeometry(r0, r1, h, seg), mat, x, y, z); g.add(m); return m; };
+M.piano = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05 });
+M.keys = new THREE.MeshPhysicalMaterial({ color: 0xF4F1EA, roughness: 0.3 });
+M.linen = new THREE.MeshPhysicalMaterial({ color: 0xF1EEE8, roughness: 0.95, sheen: 0.4, sheenColor: new THREE.Color(0xFFFFFF) });
+M.vase = new THREE.MeshPhysicalMaterial({ color: 0xC9B79C, roughness: 0.7 });
+M.stems = new THREE.MeshStandardMaterial({ color: 0xB89A6A, roughness: 0.9 });
+const BOOKS = [0x7A5A3E, 0x3F4A52, 0xB9A487, 0x6E3B2E, 0xD8CFC0, 0x2F3A2F].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }));
+// a wall mandir: a shuttered base, an open niche under a brass arch, a brass jaali back
+B.pooja = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d, top = 0.78, H = 0.92, nd = 0.3, nz = -d / 2 + nd / 2;
+  P(g, w - 0.02, 0.06, d - 0.04, 0, 0.03, -0.01, M.toekick, 0.004);
+  P(g, w, 0.72, d, 0, 0.06 + 0.36, 0, M.walnut, 0.01);
+  P(g, 0.004, 0.62, 0.004, 0, 0.42, d / 2 + 0.001, M.toekick, 0.001);
+  for (const sx of [-1, 1]) P(g, 0.06, H, nd, sx * (w / 2 - 0.03), top + H / 2, nz, M.walnut, 0.008);
+  P(g, w + 0.02, 0.08, nd + 0.03, 0, top + H + 0.04, nz + 0.01, M.walnut, 0.01);
+  P(g, w - 0.12, H, 0.012, 0, top + H / 2, -d / 2 + 0.006, M.brass, 0.003);
+  const r = (w - 0.12) / 2, arch = mesh(new THREE.TorusGeometry(r, 0.016, 8, 32, Math.PI), M.brass, 0, top + H - r - 0.03, nz + nd / 2 - 0.02); g.add(arch);
+  cyl(g, 0.03, 0.02, 0.03, 0, top + 0.015, nz + 0.06, M.brass);                        // a diya
+  return g;
+};
+B.bookshelf = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d, H = 1.9, r = rng(7);
+  for (const sx of [-1, 1]) P(g, 0.025, H, d, sx * (w / 2 - 0.0125), H / 2, 0, M.walnut, 0.004);
+  for (let i = 0; i < 6; i++) P(g, w - 0.05, 0.022, d - 0.01, 0, 0.04 + i * 0.365, 0, M.walnut, 0.003);
+  for (let s = 0; s < 5; s++) {
+    let x = -w / 2 + 0.04;
+    while (x < w / 2 - 0.12) {
+      const bw = 0.025 + r() * 0.03, bh = 0.2 + r() * 0.1;
+      if (r() < 0.12) { x += 0.08; continue; }
+      P(g, bw, bh, d * 0.75, x + bw / 2, 0.051 + s * 0.365 + bh / 2, 0.01, BOOKS[Math.floor(r() * BOOKS.length)], 0.002);
+      x += bw + 0.003;
+    }
+  }
+  return g;
+};
+B.sideboard = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, 0.014, 0.01, 0.14, sx * (w / 2 - 0.06), 0.07, sz * (d / 2 - 0.06), M.brass, 10);
+  P(g, w, 0.6, d, 0, 0.44, 0, M.walnut, 0.01);
+  for (const k of [-1, 1]) P(g, 0.004, 0.54, 0.004, k * w / 6, 0.44, d / 2 + 0.001, M.toekick, 0.001);
+  P(g, w + 0.01, 0.025, d + 0.01, 0, 0.7525, 0, M.top, 0.004);
+  return g;
+};
+B.console = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  P(g, w, 0.03, d, 0, 0.785, 0, M.walnut, 0.006);
+  P(g, w - 0.08, 0.02, d - 0.06, 0, 0.18, 0, M.walnut, 0.004);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, 0.012, 0.012, 0.77, sx * (w / 2 - 0.04), 0.385, sz * (d / 2 - 0.04), M.brass, 10);
+  return g;
+};
+B.desk = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  P(g, w, 0.03, d, 0, 0.745, 0, M.walnut, 0.006);
+  for (const sx of [-1, 1]) P(g, 0.03, 0.73, d - 0.04, sx * (w / 2 - 0.03), 0.365, 0, M.lacquer, 0.004);
+  P(g, 0.4, 0.14, d - 0.08, w / 2 - 0.25, 0.66, 0.0, M.lacquer, 0.004);
+  return g;
+};
+B.desk_chair = (p) => {
+  const g = at(p);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, 0.014, 0.012, 0.45, sx * 0.2, 0.225, sz * 0.19, M.walnut, 10);
+  P(g, 0.46, 0.06, 0.44, 0, 0.47, 0.01, M.fabric, 0.02);
+  const back = P(g, 0.44, 0.34, 0.05, 0, 0.72, -0.2, M.fabric, 0.02); back.rotation.x = -0.1;
+  return g;
+};
+B.nightstand = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, 0.012, 0.009, 0.14, sx * (w / 2 - 0.04), 0.07, sz * (d / 2 - 0.04), M.walnut, 10);
+  P(g, w, 0.36, d, 0, 0.32, 0, M.lacquer, 0.01);
+  P(g, w - 0.03, 0.004, 0.004, 0, 0.38, d / 2 + 0.001, M.toekick, 0.001);
+  P(g, w + 0.004, 0.02, d + 0.004, 0, 0.51, 0, M.walnut, 0.004);
+  return g;
+};
+B.dresser = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  P(g, w - 0.03, 0.08, d - 0.04, 0, 0.04, -0.01, M.toekick, 0.004);
+  P(g, w, 0.76, d, 0, 0.46, 0, M.lacquer, 0.008);
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) {
+    const x = (i - 0.5) * w / 2, y = 0.08 + 0.76 * (j + 0.5) / 3;
+    P(g, w / 2 - 0.01, 0.76 / 3 - 0.008, 0.012, x, y, d / 2 + 0.002, M.lacquer, 0.003);
+    cyl(g, 0.012, 0.012, 0.02, x, y, d / 2 + 0.016, M.brass, 10).rotation.x = Math.PI / 2;
+  }
+  return g;
+};
+B.ottoman = (p) => {
+  const g = at(p), r = Math.min(p.obb.w, p.obb.d) / 2;
+  cyl(g, r, r, 0.4, 0, 0.2, 0, M.accent, 40);
+  return g;
+};
+B.chaise = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, 0.014, 0.01, 0.12, sx * (w / 2 - 0.08), 0.06, sz * (d / 2 - 0.08), M.brass, 10);
+  P(g, w, 0.22, d, 0, 0.23, 0, M.fabric, 0.05);
+  const back = P(g, 0.5, 0.45, d - 0.04, -w / 2 + 0.3, 0.46, 0, M.fabric, 0.08); back.rotation.z = -0.55;
+  P(g, 0.4, 0.12, 0.3, -w / 2 + 0.45, 0.44, 0, M.accent, 0.05);
+  return g;
+};
+B.lounger = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d, n = 11;
+  for (const sx of [-1, 1]) P(g, w, 0.05, 0.04, 0, 0.18, sx * (d / 2 - 0.02), M.walnut, 0.006);
+  for (let i = 0; i < n; i++) P(g, (w * 0.62) / n - 0.012, 0.02, d - 0.02, w / 2 - (w * 0.62) * (i + 0.5) / n, 0.22, 0, M.walnut, 0.004);
+  const back = P(g, w * 0.36, 0.02, d - 0.02, -w / 2 + w * 0.2, 0.36, 0, M.walnut, 0.004); back.rotation.z = -0.6;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) P(g, 0.04, 0.16, 0.04, sx * (w / 2 - 0.06), 0.08, sz * (d / 2 - 0.02), M.walnut, 0.004);
+  P(g, w * 0.6, 0.05, d - 0.08, w * 0.18, 0.255, 0, M.linen, 0.02);
+  return g;
+};
+B.floor_vase = (p) => {
+  const g = at(p), r = Math.min(p.obb.w, p.obb.d) / 2;
+  const pts = [[0, 0], [r * 0.7, 0], [r, 0.2], [r * 0.9, 0.5], [r * 0.45, 0.72], [r * 0.5, 0.78], [0, 0.78]].map(([x, y]) => new THREE.Vector2(x, y));
+  g.add(mesh(new THREE.LatheGeometry(pts, 32), M.vase));
+  const rr = rng(11);
+  for (let i = 0; i < 9; i++) {
+    const a = rr() * Math.PI * 2, h = 0.6 + rr() * 0.5, s = cyl(g, 0.004, 0.006, h, Math.cos(a) * 0.03, 0.72 + h / 2, Math.sin(a) * 0.03, M.stems, 5);
+    s.rotation.set(Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25); s.castShadow = false;
+  }
+  return g;
+};
+B.piano = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  P(g, w, 1.22, d * 0.45, 0, 0.61, -d / 2 + d * 0.225, M.piano, 0.01);
+  P(g, w, 0.06, d * 0.4, 0, 0.72, d * 0.02, M.piano, 0.006);
+  P(g, w - 0.14, 0.015, 0.14, 0, 0.757, d * 0.06, M.keys, 0.003);
+  for (const sx of [-1, 1]) P(g, 0.06, 0.7, 0.06, sx * (w / 2 - 0.05), 0.35, d * 0.15, M.piano, 0.006);
+  return g;
+};
+B.crib = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d, H = 0.95;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) P(g, 0.04, H, 0.04, sx * (w / 2 - 0.02), H / 2, sz * (d / 2 - 0.02), M.lacquer, 0.006);
+  for (const sz of [-1, 1]) {
+    for (const y of [0.3, H - 0.03]) P(g, w - 0.04, 0.03, 0.03, 0, y, sz * (d / 2 - 0.02), M.lacquer, 0.004);
+    for (let i = 1; i < 12; i++) cyl(g, 0.009, 0.009, H - 0.33, -w / 2 + w * i / 12, 0.3 + (H - 0.33) / 2, sz * (d / 2 - 0.02), M.lacquer, 8);
+  }
+  for (const sx of [-1, 1]) P(g, 0.03, H - 0.3, d - 0.04, sx * (w / 2 - 0.02), 0.3 + (H - 0.3) / 2, 0, M.lacquer, 0.004);
+  P(g, w - 0.08, 0.1, d - 0.08, 0, 0.35, 0, M.linen, 0.03);
+  return g;
+};
+B.shoe_cabinet = (p) => {
+  const g = at(p), w = p.obb.w, d = p.obb.d;
+  P(g, w - 0.03, 0.1, d - 0.04, 0, 0.05, -0.01, M.toekick, 0.004);
+  P(g, w, 0.9, d, 0, 0.55, 0, M.shutters, 0.006);
+  for (const y of [0.4, 0.7]) P(g, w - 0.02, 0.004, 0.004, 0, y, d / 2 + 0.001, M.toekick, 0.001);
+  P(g, w + 0.01, 0.025, d + 0.01, 0, 1.0125, 0, M.walnut, 0.004);
+  return g;
+};
+// `tags` are what the search box also matches
 const CATALOGUE = [
-  { type: 'sofa3', name: 'Sofa', w: 2.1, d: 0.92 },
-  { type: 'armchair', name: 'Armchair', w: 0.85, d: 0.85 },
-  { type: 'coffee_table', name: 'Coffee table', w: 1.1, d: 0.6 },
-  { type: 'side_table', name: 'Side table', w: 0.5, d: 0.5 },
-  { type: 'pouf', name: 'Pouf', w: 0.55, d: 0.55 },
-  { type: 'bench', name: 'Bench', w: 1.3, d: 0.42 },
-  { type: 'dining_chair', name: 'Dining chair', w: 0.5, d: 0.5 },
-  { type: 'stool', name: 'Bar stool', w: 0.45, d: 0.45 },
-  { type: 'rug', name: 'Rug', w: 2.4, d: 1.7 },
-  { type: 'floor_lamp', name: 'Floor lamp', w: 0.45, d: 0.45 },
-  { type: 'plant', name: 'Plant', w: 0.6, d: 0.6 },
+  { type: 'sofa3', name: 'Sofa', w: 2.1, d: 0.92, tags: 'couch seating living' },
+  { type: 'armchair', name: 'Armchair', w: 0.85, d: 0.85, tags: 'chair seating' },
+  { type: 'chaise', name: 'Chaise', w: 1.6, d: 0.7, tags: 'daybed lounge divan' },
+  { type: 'ottoman', name: 'Ottoman', w: 0.6, d: 0.6, tags: 'footstool pouffe seat' },
+  { type: 'coffee_table', name: 'Coffee table', w: 1.1, d: 0.6, tags: 'centre table living' },
+  { type: 'side_table', name: 'Side table', w: 0.5, d: 0.5, tags: 'end table' },
+  { type: 'pouf', name: 'Pouf', w: 0.55, d: 0.55, tags: 'pouffe stool' },
+  { type: 'bench', name: 'Bench', w: 1.3, d: 0.42, tags: 'seat entry' },
+  { type: 'console', name: 'Console table', w: 1.2, d: 0.35, tags: 'hall entry foyer table' },
+  { type: 'sideboard', name: 'Sideboard', w: 1.6, d: 0.45, tags: 'buffet credenza crockery storage' },
+  { type: 'bookshelf', name: 'Bookshelf', w: 0.9, d: 0.35, tags: 'books shelves library storage' },
+  { type: 'pooja', name: 'Pooja unit', w: 0.9, d: 0.45, tags: 'mandir temple prayer puja' },
+  { type: 'dining_chair', name: 'Dining chair', w: 0.5, d: 0.5, tags: 'chair' },
+  { type: 'stool', name: 'Bar stool', w: 0.45, d: 0.45, tags: 'counter seat' },
+  { type: 'desk', name: 'Study desk', w: 1.2, d: 0.6, tags: 'work table study office' },
+  { type: 'desk_chair', name: 'Desk chair', w: 0.55, d: 0.55, tags: 'study office chair' },
+  { type: 'nightstand', name: 'Nightstand', w: 0.5, d: 0.4, tags: 'bedside table' },
+  { type: 'dresser', name: 'Dresser', w: 1.2, d: 0.5, tags: 'chest of drawers storage bedroom' },
+  { type: 'crib', name: 'Crib', w: 1.3, d: 0.7, tags: 'cot baby nursery' },
+  { type: 'shoe_cabinet', name: 'Shoe cabinet', w: 1.0, d: 0.35, tags: 'shoes foyer entry storage' },
+  { type: 'piano', name: 'Upright piano', w: 1.5, d: 0.6, tags: 'music' },
+  { type: 'lounger', name: 'Sun lounger', w: 1.9, d: 0.7, tags: 'balcony outdoor deck chair' },
+  { type: 'rug', name: 'Rug', w: 2.4, d: 1.7, tags: 'carpet dhurrie' },
+  { type: 'floor_lamp', name: 'Floor lamp', w: 0.45, d: 0.45, tags: 'light lighting' },
+  { type: 'plant', name: 'Plant', w: 0.6, d: 0.6, tags: 'green planter pot' },
+  { type: 'floor_vase', name: 'Floor vase', w: 0.35, d: 0.35, tags: 'decor dried flowers' },
 ];
 
 // ------------------------------------------------------------------ real products
@@ -289,17 +453,38 @@ for (let i = 0; i < zone.pieces.length; i++) for (let j = i + 1; j < zone.pieces
 const fixedBoxes = api.obstacles.map(o => corners(o, o.w, o.d, 0.02));
 const fixedOk = new Set();
 for (const p of zone.pieces) fixedBoxes.forEach((b, i) => { if (overlap(corners(p.obb, p.obb.w, p.obb.d, 0.02), b)) fixedOk.add(p.id + '|' + i); });
-function fits(p, q) {
-  if (!samples(q, p.obb.w, p.obb.d, 0.05).every(pt => OPEN.some(r => inRing(pt, r.outline)) && !inWall(pt))) return false;
-  if (p.type === 'rug') return true;
+// why a piece cannot stand at q (null when it can), said to the viewer while dragging
+function whyNot(p, q) {
+  const pts = samples(q, p.obb.w, p.obb.d, 0.05);
+  if (pts.some(pt => inWall(pt))) return 'It would go into a wall';
+  if (!pts.every(pt => OPEN.some(r => inRing(pt, r.outline)))) return 'It has to stand inside an open room';
+  if (p.type === 'rug') return null;
   const mine = corners(q, p.obb.w, p.obb.d, 0.02);
-  if (fixedBoxes.some((b, i) => !fixedOk.has(p.id + '|' + i) && overlap(mine, b))) return false;
+  if (fixedBoxes.some((b, i) => !fixedOk.has(p.id + '|' + i) && overlap(mine, b))) return 'Overlaps fitted joinery';
   for (const g of pieceGroups) {
     const o = g.userData.piece;
     if (o === p || g.userData.removed || o.type === 'rug' || allowed.has(pairKey(p, o))) continue;
-    if (overlap(mine, corners(pose(o), o.obb.w, o.obb.d, 0.02))) return false;
+    if (overlap(mine, corners(pose(o), o.obb.w, o.obb.d, 0.02))) return 'Overlaps other furniture';
   }
-  return true;
+  return null;
+}
+const fits = (p, q) => !whyNot(p, q);
+// Pull a piece flush against a wall it has come within 15 cm of, on any side, the way
+// a piece of furniture is pushed back against a wall.
+function snapFlush(p, q) {
+  const c = Math.cos(q.angle), s = Math.sin(q.angle), hw = p.obb.w / 2, hd = p.obb.d / 2;
+  const sides = [[c, s, hw, -s, c, hd], [-c, -s, hw, -s, c, hd], [-s, c, hd, c, s, hw], [s, -c, hd, c, s, hw]];
+  let best = null;
+  for (const [nx, ny, h, tx, ty, l] of sides) {
+    let gap = Infinity;
+    for (const k of [-0.8, 0, 0.8]) {
+      const bx = q.cx + nx * h + tx * l * k, by = q.cy + ny * h + ty * l * k;
+      for (let dd = -0.03; dd <= 0.15; dd += 0.01) if (inWall([bx + nx * dd, by + ny * dd])) { gap = Math.min(gap, dd); break; }
+    }
+    if (gap <= 0.15 && (!best || Math.abs(gap) < Math.abs(best.gap))) best = { nx, ny, gap };
+  }
+  if (best) { const shift = best.gap - 0.012; q.cx += best.nx * shift; q.cy += best.ny * shift; }
+  return q;
 }
 function setPose(pivot, q) {
   const p = pivot.userData.piece;
@@ -586,7 +771,7 @@ function takeOut(g) {
 // ------------------------------------------------------------------ canvas: drag furniture
 let drag = null;
 el.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || api.walking) return;
   const g = pickPiece(e);
   if (g && g.userData.piece.movable) {
     controls.enabled = false;                // capture phase: runs before the orbit controls
@@ -597,23 +782,29 @@ el.addEventListener('pointerdown', (e) => {
   } else drag = { none: true, x0: e.clientX, y0: e.clientY };
 }, true);
 el.addEventListener('pointermove', (e) => {
+  if (api.walking) return;
   if (drag?.g) {
     if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4) return;
     if (!drag.moved) { drag.moved = true; sel = { pivot: drag.g }; hideCard(); highlight(null); }
     api.tip.hidden = true; el.style.cursor = 'grabbing';
+    drag.free = e.altKey; drag.x = e.clientX; drag.y = e.clientY;
     moveTo(drag, floorAt(e));
     return;
   }
   if (!drag) el.style.cursor = pickPiece(e)?.userData.piece.movable ? 'grab' : '';
 }, true);
+// Moves snap to 10 cm and pull flush to a near wall; holding Option (Alt) places freely.
 function moveTo(d, f) {
   if (!f) return;
   const raw = f.sub(d.off), rx = raw.x + CX, ry = CY - raw.z, st = d.start;
-  const q = { cx: st.cx + Math.round((rx - st.cx) / 0.1) * 0.1, cy: st.cy + Math.round((ry - st.cy) / 0.1) * 0.1,
-              angle: st.angle + THREE.MathUtils.degToRad(d.turn) };
-  const ok = fits(d.p, q);
-  if (ok) { setPose(d.g, q); d.ok = true; api.dirtyShadows(); }
-  drawOutline(d.p, q, ok);
+  const angle = st.angle + THREE.MathUtils.degToRad(d.turn);
+  const q = d.free ? { cx: rx, cy: ry, angle }
+    : { cx: st.cx + Math.round((rx - st.cx) / 0.1) * 0.1, cy: st.cy + Math.round((ry - st.cy) / 0.1) * 0.1, angle };
+  if (!d.free && d.p.type !== 'rug') snapFlush(d.p, q);
+  const why = whyNot(d.p, q);
+  if (!why) { setPose(d.g, q); d.ok = true; api.dirtyShadows(); }
+  drawOutline(d.p, q, !why);
+  showWhy(why, d.x, d.y);
   d.lastF = f.add(d.off);
 }
 el.addEventListener('wheel', (e) => {
@@ -623,8 +814,10 @@ el.addEventListener('wheel', (e) => {
   moveTo(drag, drag.lastF?.clone());
 }, { capture: true, passive: false });
 el.addEventListener('pointerup', (e) => {
+  if (api.walking) return;
   const d = drag; drag = null;
   controls.enabled = true; el.style.cursor = '';
+  showWhy(null);
   if (!d) return;
   if (d.g) {
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -656,6 +849,7 @@ const ICON = {
   lamp: '<path d="M8 3h8l3 8H5l3-8Z"/><path d="M12 11v8"/><path d="M8 21h8"/>',
   moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
   curtains: '<path d="M5 3v18M19 3v18M5 5h14"/><path d="M6 5c4 3 4 11 0 14M18 5c-4 3-4 11 0 14"/>',
+  walk: '<circle cx="13" cy="4.5" r="2"/><path d="m9 21 2.5-6.5 3 2.5V21"/><path d="M7 12.5 10 9l3.5 1.5 2 3 2.5 1"/><path d="m11.5 14.5.8-4.2"/>',
 };
 const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
 ui.innerHTML = `
@@ -671,7 +865,7 @@ ui.innerHTML = `
     <button data-t="undo" title="Undo (⌘Z)">${icon('undo')}</button><button data-t="redo" title="Redo (⇧⌘Z)">${icon('redo')}</button>
     <span></span>
     <button data-t="save" title="Save an image">${icon('save')}</button><button data-t="link" title="Copy a link to this setup">${icon('link')}</button>
-    <button data-t="hide" title="Show or hide the moodboard (N)">${icon('hide')}</button><button data-t="reset" title="Reset the view (R)">${icon('reset')}</button>
+    <button data-t="walk" title="Walk through the flat">${icon('walk')}</button><button data-t="hide" title="Show or hide the moodboard (N)">${icon('hide')}</button><button data-t="reset" title="Reset the view (R)">${icon('reset')}</button>
     <button data-t="help" title="How it works (?)">${icon('help')}</button>
   </nav>
   <section class="panel daylight">
@@ -686,7 +880,10 @@ ui.innerHTML = `
       <span class="target" hidden><span></span><button title="Clear">×</button></span></div>
     <div class="tray"></div>
   </section>
-  <div class="panel card" hidden><div class="who"><b></b></div>
+  <div class="walkbar"><span>Drag to look around · Tap the floor to walk there · WASD or arrow keys</span><button>Back to plan</button></div>
+  <div class="why" hidden></div>
+  <button class="turn-dot" hidden title="Drag to turn · hold Option to turn freely"></button>
+  <div class="panel card" hidden><div class="who"><b></b><small></small></div>
     <button data-c="turn">Turn</button><button data-c="back">Put back</button><button data-c="out">Take out</button></div>
   <div class="toast" hidden></div>
   <dialog class="help">
@@ -697,6 +894,8 @@ ui.innerHTML = `
     <p>Drag a sample from the tray onto a surface and it previews in place; let go to keep it. Or open a room, click a surface, then click a sample. Wood goes on floors, woodwork, fronts and doors; stone on floors, walls and worktops; paint on walls, fronts and doors; fabric on upholstery, cushions and rugs. Each bedroom opens with Ar. Shivangi Kaushik's own finishes and changes on its own; Original puts hers back.</p>
     <h3>Furniture</h3>
     <p>Drag any loose piece to move it. It snaps in 10 cm steps and will not go into a wall, another piece or fitted joinery. Scroll while dragging to turn it. Click a piece for Turn, Put back and Take out. The Furniture tab adds pieces: click one to drop it in view, or drag it into a room. Kitchen units, wardrobes and bathroom fittings are fixed.</p>
+    <h3>Walk</h3>
+    <p>The walking figure in the toolbar puts you inside the flat at eye height, in the room you were looking at. Drag to look around, tap the floor to walk there, or use WASD and the arrow keys. Doors stand open; Esc or Back to plan returns to the model.</p>
     <h3>Light</h3>
     <p>The sun follows its path over Delhi through the day. Move the slider or pick a time. After dark the flat gets a warm evening light, and any floor lamp you added switches on.</p>
     <h3>Mood</h3>
@@ -706,7 +905,7 @@ ui.innerHTML = `
   </dialog>`;
 document.body.appendChild(ui);
 
-let tab = 'wood';
+let tab = 'wood', libQuery = '';
 let thumbsStarted = false;
 function setTab(k) {
   tab = k;
@@ -727,13 +926,21 @@ function renderTray() {
   tray.innerHTML = '';
   if (tab === 'products') return renderProducts(tray);
   if (tab === 'furniture') {
-    for (const c of CATALOGUE) {
+    const q = document.createElement('input');
+    q.type = 'text'; q.className = 'lib-search'; q.placeholder = 'Search the library'; q.setAttribute('aria-label', 'Search the library');
+    q.value = libQuery; tray.appendChild(q);
+    const items = CATALOGUE.map(c => {
       const b = document.createElement('button');
       b.className = 'item'; b.dataset.type = c.type;
       b.innerHTML = `<span class="pic">${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}</span><small>${c.name}</small>`;
       wireCatalogue(b, c);
       tray.appendChild(b);
-    }
+      return [b, `${c.name} ${c.tags || ''}`.toLowerCase()];
+    });
+    const none = document.createElement('p'); none.className = 'pnote'; none.textContent = 'Nothing by that name'; tray.appendChild(none);
+    const filter = () => { libQuery = q.value; const t = libQuery.trim().toLowerCase(); let n = 0;
+      for (const [b, text] of items) { b.hidden = !!t && !t.split(/\s+/).every(w => text.includes(w)); n += !b.hidden; } none.hidden = n > 0; };
+    q.oninput = filter; filter();
     return;
   }
   const destination = sel?.slot || scoped(FIRST_SLOT[tab]);
@@ -831,11 +1038,12 @@ function wireCatalogue(b, c) {
     if (!f) return;
     const cx = f.x + CX, cy = CY - f.z;
     if (!d.g) { d.g = addPiece(c.type, { cx, cy, angle: 0 }); d.g.visible = true; d.drag = { g: d.g, p: d.g.userData.piece, start: { cx, cy, angle: 0 }, off: new V3(), turn: 0 }; }
+    d.drag.free = e.altKey; d.drag.x = e.clientX; d.drag.y = e.clientY;
     moveTo(d.drag, f); d.ok = d.ok || d.drag.ok;
   });
   b.addEventListener('pointerup', () => {
     if (!d) return;
-    const dd = d; d = null;
+    const dd = d; d = null; showWhy(null);
     if (!dd.moved) return addInView(c);
     if (!dd.g) return;
     if (!dd.ok) { dropAdded(dd.g); outline.visible = false; if (c.type === 'floor_lamp') relight(); return toast('It needs free floor in an open room'); }
@@ -857,10 +1065,50 @@ function showCard() {
   const g = sel?.pivot; if (!g) return hideCard();
   const p = g.userData.piece;
   $('.who b', card).textContent = p.name;
+  $('.who small', card).textContent = `${size(p.obb.w)} × ${size(p.obb.d)}`;
   card.querySelector('[data-c="back"]').hidden = !p.moved;
   card.hidden = false;
 }
 function hideCard() { card.hidden = true; }
+// sizes read both ways: metres, and feet and inches as they are quoted in India
+function size(m) { const inch = Math.round(m / 0.0254), ft = Math.floor(inch / 12); return `${m.toFixed(2)} m (${ft}′${inch % 12}″)`; }
+// the reason a dragged piece will not go where the pointer is
+const whyEl = $('.why', ui);
+function showWhy(text, x, y) {
+  whyEl.hidden = !text;
+  if (text) { whyEl.textContent = text; whyEl.style.transform = `translate(${x + 16}px, ${y + 18}px)`; }
+}
+// The turn dot: a handle off the selected piece's side; drag it round the piece to turn
+// it, in 15 degree steps, or freely with Option (Alt) held.
+const dot = $('.turn-dot', ui);
+let rot = null;
+function dotAt(p) {
+  const q = pose(p), hd = p.obb.d / 2 + 0.35;
+  return W(q.cx - Math.sin(q.angle) * hd, q.cy + Math.cos(q.angle) * hd).setY(0.05);
+}
+api.frameHooks.push(() => {
+  const g = sel?.pivot, show = !!(g && g.userData.piece.movable && !drag?.moved && shown(g) && api.focused);
+  dot.hidden = !show;
+  if (show) { const [x, y] = toScreen(dotAt(g.userData.piece)); dot.style.transform = `translate(${x - 9}px, ${y - 9}px)`; }
+});
+dot.addEventListener('pointerdown', (e) => {
+  if (!sel?.pivot) return;
+  e.preventDefault(); e.stopPropagation(); try { dot.setPointerCapture(e.pointerId); } catch {}
+  const g = sel.pivot; rot = { g, p: g.userData.piece };
+  controls.enabled = false; hideCard();
+});
+dot.addEventListener('pointermove', (e) => {
+  if (!rot) return;
+  const f = floorAt(e); if (!f) return;
+  const q0 = pose(rot.p), px = f.x + CX, py = CY - f.z;
+  let a = Math.atan2(py - q0.cy, px - q0.cx) - Math.PI / 2;
+  if (!e.altKey) { const st = Math.PI / 12; a = Math.round(a / st) * st; }
+  const q = { ...q0, angle: a }, why = whyNot(rot.p, q);
+  if (!why) { setPose(rot.g, q); api.dirtyShadows(); }
+  drawOutline(rot.p, why ? q : pose(rot.p), !why); showWhy(why, e.clientX, e.clientY);
+});
+const endRot = () => { if (!rot) return; rot = null; controls.enabled = true; showWhy(null); commit(); if (sel?.pivot) { drawOutline(sel.pivot.userData.piece, pose(sel.pivot.userData.piece)); showCard(); } };
+dot.addEventListener('pointerup', endRot); dot.addEventListener('pointercancel', endRot);
 card.querySelector('[data-c="turn"]').onclick = () => sel?.pivot && turn(sel.pivot, 90);
 card.querySelector('[data-c="back"]').onclick = () => sel?.pivot && putBack(sel.pivot);
 card.querySelector('[data-c="out"]').onclick = () => sel?.pivot && takeOut(sel.pivot);
@@ -910,6 +1158,13 @@ $('.layout-reset', ui).onclick = () => {
   for (const g of pieceGroups) { const p = g.userData.piece; setPose(g, { cx: p.obb.cx, cy: p.obb.cy, angle: p.obb.angle }); g.userData.removed = false; }
   refreshVisibility(); deselect(); relight(); commit(); toast('Furniture reset');
 };
+// walk mode (walk.js): the title follows the room you are standing in
+const walk = createWalk(api, { onChange: (r) => {
+  document.getElementById('t-k').textContent = 'B-34 · Dwarka · Walking';
+  const name = r.space === 'balcony-all' ? 'Balcony' : r.name;
+  if (document.getElementById('t-h').textContent !== name) { document.getElementById('t-h').textContent = name; document.getElementById('t-a').textContent = ''; }
+} });
+$('.walkbar button', ui).onclick = () => walk.exit();
 const help = $('dialog.help', ui);
 $('.x', help).onclick = () => help.close();
 const TOOL = {
@@ -927,12 +1182,13 @@ const TOOL = {
   hide: () => document.body.classList.toggle('clean'),
   board: () => { document.body.classList.toggle('no-board'); api.wake(); },
   reset: () => api.resetView(),
+  walk: () => (walk.on ? walk.exit() : (deselect(), walk.enter())),
   help: () => help.showModal(),
 };
 ui.querySelectorAll('.tools [data-t]').forEach(b => b.onclick = () => TOOL[b.dataset.t === 'hide' ? 'board' : b.dataset.t]());
 
 addEventListener('keydown', (e) => {
-  if (e.target.closest?.('input[type=text], textarea') || help.open) return;
+  if (e.target.closest?.('input[type=text], textarea') || help.open || api.walking) return;
   const k = e.key;
   if ((e.metaKey || e.ctrlKey) && k.toLowerCase() === 'z') { e.preventDefault(); TOOL[e.shiftKey ? 'redo' : 'undo'](); return; }
   if (k === 'Escape' && sel) { e.stopImmediatePropagation(); deselect(); return; }
