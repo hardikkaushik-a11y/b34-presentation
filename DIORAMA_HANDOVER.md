@@ -1,5 +1,11 @@
 # Diorama - handover (branch `claude/diorama-v2-wip`)
 
+## Update - 2026-09-29: Bedroom 2 wardrobe crop
+
+- The earlier follow-up commit `f4df5a4` shortened a provisional sill wall, but the user's screenshot showed the door-side wardrobe still looked cropped. That sill edit has been removed.
+- In `diorama/diorama.js`, `modelCut('bed2')` expands the full model clip box to include the wardrobe. The knee-height duplicate now uses those same expanded bounds; before, it still used the narrower registered bounds.
+- Fresh local page load brings up the controls. Do not claim the visual crop is resolved until checked from the user's entry-side camera angle.
+
 Read this first, then the project handover Hardik keeps on his Mac (`CLAUDE_HANDOVER.md`,
 he can upload it). This file is technical only: the repo is public, so no personal
 details go in here.
