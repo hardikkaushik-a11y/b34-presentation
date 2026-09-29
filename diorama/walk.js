@@ -62,14 +62,21 @@ export function createWalk(api, { onChange } = {}) {
   // Bedroom 3's bay (added in diorama.js) has glass but no wall above it: close it too
   const band = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), nx = -dy / l * 0.06, ny = dx / l * 0.06;
     lintel([[a[0] - nx, a[1] - ny], [b[0] - nx, b[1] - ny], [b[0] + nx, b[1] + ny], [a[0] + nx, a[1] + ny], [a[0] - nx, a[1] - ny]]); };
-  for (const [a, b] of [[[8.40, 14.392], [10.60, 14.392]], [[10.60, 14.392], [10.60, 13.65]], [[10.60, 13.65], [11.61, 13.65]], [[8.42, 13.427], [8.42, 14.392]]]) band(a, b);
+  for (const [a, b] of [
+    [[8.40, 14.392], [10.60, 14.392]], [[10.60, 14.392], [10.60, 13.65]],
+    [[10.60, 13.65], [11.61, 13.65]], [[8.42, 13.427], [8.42, 14.392]],
+    [[0.86, 10.79], [1.58, 10.79]],
+  ]) band(a, b);
   const glow = new THREE.AmbientLight(0xFFF3E6, 0); scene.add(glow);
 
   // what walk mode changes on the rest of the scene, remembered so it can be put back
   let saved = null;
   function raise() {
-    saved = { clip: renderer.clippingPlanes, walls: [], exposure: renderer.toneMappingExposure };
+    saved = { clip: renderer.clippingPlanes, walls: [], roomDoors: [], exposure: renderer.toneMappingExposure };
     renderer.clippingPlanes = [];
+    scene.traverse(o => {
+      if (o.userData.roomDoor) { saved.roomDoors.push([o, o.visible]); o.visible = false; }
+    });
     const tall = (m) => m.userData.wall && m.userData.wall.z0 === 0 && m.userData.wall.z1 >= CUT - 1e-6;
     const walls = [...api.shell.children, ...scene.children.filter(o => o.userData.cladding && !o.userData.rooms).flatMap(o => o.children)];
     for (const m of walls) {
@@ -87,6 +94,7 @@ export function createWalk(api, { onChange } = {}) {
     if (!saved) return;
     renderer.clippingPlanes = saved.clip;
     for (const [m, sy, v] of saved.walls) { m.scale.y = sy; m.visible = v; }
+    for (const [o, v] of saved.roomDoors) o.visible = v;
     renderer.toneMappingExposure = saved.exposure;
     extras.visible = false; glow.intensity = 0; saved = null;
     api.dirtyShadows();
@@ -291,8 +299,9 @@ export function createWalk(api, { onChange } = {}) {
       }
       moved = true;
     }
-    // Bedroom 3's sliding door opens as you come up to it
-    if (Math.hypot(pos.x - 8.42, pos.y - 13.9) < 1.4) api.setDoor(1);
+    // Both balcony doors open as you come up to them.
+    if (Math.hypot(pos.x - 8.42, pos.y - 13.9) < 1.4) api.setDoor('bed3', 1);
+    if (Math.hypot(pos.x - 1.22, pos.y - 10.79) < 1.2) api.setDoor('bed1', 1);
     if (moved) place();
     return moved;
   });

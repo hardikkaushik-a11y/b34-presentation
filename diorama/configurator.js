@@ -97,6 +97,7 @@ const ROOM_SLOT = {
   upholstery: { name: 'Upholstery', thing: 'bed and chairs', cats: ['fabric'] },
   accent:     { name: 'Accents', thing: 'cushions and accents', cats: ['fabric'] },
   joinery:    { name: 'Wardrobe fronts', thing: 'wardrobe', cats: ['paint', 'wood'] },
+  doors:      { name: 'Doors', thing: 'doors', cats: ['paint', 'wood'] },
   woodwork:   { name: 'Woodwork', thing: 'woodwork', cats: ['wood'] },
   rug:        { name: 'Rug', thing: 'rug', cats: ['fabric'] },
 };
@@ -1486,11 +1487,11 @@ const productThumbs = new Map();
 function productPic(key, id) {
   const k = key.split('.')[0];
   if (k === 'finish') return `background:${METAL[id]}`;
-  if (k === 't3walls' || k === 'balconyFloor' || k === 'balconyWall') {
+  if (k === 't2walls' || k === 't3walls' || k === 'balconyFloor' || k === 'balconyWall' || k === 't4tiles') {
     if (k === 't3walls' && id === 'marble') return `background-image:url(${swatchURL(M.tlt3wall.map, 112)})`;
     if (k === 'balconyFloor' && id === 'plain') return `background-image:url(${swatchURL(M.floor.map, 112)})`;
     if (k === 'balconyWall' && id === 'paint') return `background-image:url(${swatchURL(M.walls.map, 112)})`;
-    const name = { geode: 'geode', emerald: 'emerald', patterned: 'encaustic', plain: 'plainGrey' }[id];
+    const name = k === 't4tiles' ? 'botanical' : k === 't2walls' ? 'striated' : ({ geode: 'geode', emerald: 'geode', patterned: 'encaustic', plain: 'plainGrey' }[id]);
     return `background-image:url(${swatchURL(PR.tile(name).map, 112)})`;
   }
   const t = productThumbs.get(k + ':' + id);

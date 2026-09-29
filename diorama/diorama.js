@@ -319,6 +319,49 @@ const slider = doorPanel(8.405, DOOR.y0 + pw / 2), sliderZ = slider.position.z;
 scene.add(link);
 let doorOpen = 0, doorTarget = 0;
 
+// Bedroom 1's second balcony connection. The CAD plan puts this gate at the
+// north end of the wardrobe passage, in the 720 mm gap between the balcony
+// cupboard and the washing machines. It is a hinged glazed door, not another
+// wide slider.
+const bed1Link = new THREE.Group();
+bed1Link.userData.cladding = true;
+bed1Link.userData.rooms = ['bed1', 'wiw', 'balcony'];
+const B1_GATE = { x0: 0.86, x1: 1.58, y: 10.79 }, gateW = B1_GATE.x1 - B1_GATE.x0;
+function gatePart(geometry, material, x, y, z) {
+  const m = mesh(geometry, material, x, y, z);
+  m.userData.door = true; m.userData.doorId = 'bed1';
+  return m;
+}
+// jambs and head remain fixed while the leaf pivots from the cupboard side
+for (const x of [B1_GATE.x0, B1_GATE.x1]) {
+  const c = W(x, B1_GATE.y), jamb = gatePart(new THREE.BoxGeometry(0.055, CUT, 0.055), M.doorFrame, c.x, CUT / 2, c.z);
+  jamb.userData.wall = { z0: 0, z1: CUT, cx: x, cy: B1_GATE.y }; bed1Link.add(jamb);
+}
+{
+  const c = W((B1_GATE.x0 + B1_GATE.x1) / 2, B1_GATE.y);
+  const head = gatePart(new THREE.BoxGeometry(gateW + 0.055, 0.055, 0.055), M.doorFrame, c.x, CUT - 0.028, c.z);
+  head.userData.wall = { z0: 0, z1: CUT, cx: (B1_GATE.x0 + B1_GATE.x1) / 2, cy: B1_GATE.y }; bed1Link.add(head);
+}
+const gateHinge = new THREE.Group(), gateAt = W(B1_GATE.x0, B1_GATE.y);
+gateHinge.position.set(gateAt.x, 0, gateAt.z); gateHinge.userData.door = true; gateHinge.userData.doorId = 'bed1';
+const gateH = CUT - 0.06, gateT = 0.038;
+for (const [w, h, x, y] of [[gateT, gateH, gateT / 2, gateH / 2], [gateT, gateH, gateW - gateT / 2, gateH / 2], [gateW, 0.05, gateW / 2, 0.025], [gateW, 0.05, gateW / 2, gateH - 0.025]]) {
+  gateHinge.add(gatePart(new THREE.BoxGeometry(w, h, gateT), M.doorFrame, x, y, 0));
+}
+const gateGlass = gatePart(new THREE.PlaneGeometry(gateW - 0.09, gateH - 0.1), M.glass, gateW / 2, gateH / 2, -0.002);
+gateGlass.renderOrder = 2; gateHinge.add(gateGlass);
+// Invisible full-leaf target makes the small glazed gate easy to click even when
+// the render angle hides most of its narrow frame.
+const gateHit = gatePart(new THREE.PlaneGeometry(gateW, gateH), new THREE.MeshBasicMaterial({
+  transparent: true, opacity: 0, colorWrite: false, depthWrite: false, side: THREE.DoubleSide,
+}), gateW / 2, gateH / 2, 0.012);
+gateHinge.add(gateHit);
+const gateHandle = gatePart(new THREE.CylinderGeometry(0.016, 0.016, 0.17, 12), M.brass, gateW - 0.10, 1.02, -0.045);
+gateHandle.rotation.x = Math.PI / 2; gateHinge.add(gateHandle);
+bed1Link.add(gateHinge); scene.add(bed1Link);
+let gateOpen = 0, gateTarget = 0;
+const doorLinks = [link, bed1Link];
+
 // ------------------------------------------------------------------ furniture
 const pieces = new THREE.Group(); scene.add(pieces);
 
@@ -707,10 +750,21 @@ const lowCopies = {};
 function modelCut(rid) {
   const root = modelRoots[rid], r = zone.rooms.find(q => q.id === rid);
   if (!root || !r) return;
-  const [x0, y0, x1, y1] = r.model.clip_xy;
+  let [x0, y0, x1, y1] = r.model.clip_xy;
+  if (rid === 'bed2') {
+    // Its fluted wardrobe in the window bay extends 27 cm past the CAD model's
+    // registered clip box. Preserve that measured room geometry instead of slicing
+    // the wardrobe at the shell boundary.
+    root.updateWorldMatrix(true, true);
+    const b = new THREE.Box3().setFromObject(root);
+    x0 = Math.min(x0, b.min.x + CX - 0.02); x1 = Math.max(x1, b.max.x + CX + 0.02);
+    y0 = Math.min(y0, CY - b.max.z - 0.02); y1 = Math.max(y1, CY - b.min.z + 0.02);
+  }
   const d = new THREE.Vector3().subVectors(camera.position, controls.target); d.y = 0; d.normalize();
-  // deep enough to take a full 60 cm wardrobe on the near wall down with its wall
-  const px = d.x, py = -d.z, IN = 0.7;
+  // Deep enough to take near-wall joinery down with the cutaway. Bedroom 2's
+  // wardrobe starts only 5 cm inside the model clip boundary; even a 10 cm inset
+  // trims its doors when the camera is on that side, so do not inset this model.
+  const px = d.x, py = -d.z, IN = rid === 'bed2' ? 0 : 0.7;
   const X0 = x0 + (px < -0.2 ? IN : 0), X1 = x1 - (px > 0.2 ? IN : 0);
   const Y0 = y0 + (py < -0.2 ? IN : 0), Y1 = y1 - (py > 0.2 ? IN : 0);
   const planes = [
@@ -914,17 +968,21 @@ function roomAt(px, py) {
   return zone.rooms.filter(q => inRing([px, py], q.outline)).sort((a, b) => ringArea(a.outline) - ringArea(b.outline))[0] || null;
 }
 
-// Clicking the door slides it open and takes you through: from Bedroom 3 to the balcony,
-// from anywhere else into Bedroom 3.
+// Both balcony doors open and take you to the room on the other side.
 renderer.domElement.addEventListener('pointerup', e => {
   if (walking || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const vis = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
-  if (!ray.intersectObject(link, true).some(h => h.object.userData.door && vis(h.object))) return;
-  doorTarget = 1; wake();
-  const to = focused?.id === 'bed3' ? 'balcony' : 'bed3';
+  const hit = ray.intersectObjects(doorLinks, true).find(h => h.object.userData.door && vis(h.object));
+  if (!hit) return;
+  let o = hit.object, doorId = o.userData.doorId;
+  while (!doorId && o.parent) { o = o.parent; doorId = o.userData.doorId; }
+  if (doorId === 'bed1') gateTarget = 1;
+  else doorTarget = 1;
+  wake();
+  const to = doorId === 'bed1' ? (focused?.id === 'bed1' ? 'balcony' : 'bed1') : (focused?.id === 'bed3' ? 'balcony' : 'bed3');
   setTimeout(() => focusRoom(zone.rooms.find(q => q.id === to)), 450);
 });
 let t3clad = scene.children.find(o => o.userData.cladding) || null;
@@ -973,13 +1031,16 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   }
   const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
   // curtains and sheers never block the pointer: the door behind a sheer still answers
-  const hit = ray.intersectObjects([pieces, models, link], true).find(h => shown(h.object) && !h.object.userData.curtain && (h.object.userData.piece || h.object.userData.model || h.object.userData.door));
+  const hit = ray.intersectObjects([pieces, models, ...doorLinks], true).find(h => shown(h.object) && !h.object.userData.curtain && (h.object.userData.piece || h.object.userData.model || h.object.userData.door));
   const u = hit?.object.userData || {};
-  const key = u.door ? 'door' : u.piece || u.model || null;
+  let doorId = u.doorId;
+  if (u.door && !doorId) { let o = hit?.object; while (o?.parent && !doorId) { o = o.parent; doorId = o.userData.doorId; } }
+  const key = u.door ? `door-${doorId || 'bed3'}` : u.piece || u.model || null;
   if (key !== hovered) {
     hovered = key;
     if (u.door) {
-      tip.innerHTML = `<b>Sliding door</b><i>Click to go through to ${focused?.id === 'bed3' ? 'the balcony' : 'Bedroom 3'}</i>`;
+      const bedroom = doorId === 'bed1' ? 'Bedroom 1' : 'Bedroom 3';
+      tip.innerHTML = `<b>${doorId === 'bed1' ? 'Balcony gate' : 'Sliding door'}</b><i>Click to go through to ${focused?.id === (doorId || 'bed3') ? 'the balcony' : bedroom}</i>`;
       tip.hidden = false;
     } else if (u.piece) {
       const p = u.piece;
@@ -1038,6 +1099,14 @@ frameHooks.push(() => {
   dirtyShadows();
   return true;
 });
+// Bedroom 1's balcony gate swings north into the balcony, matching the plan.
+frameHooks.push(() => {
+  if (gateOpen === gateTarget) return false;
+  gateOpen += Math.sign(gateTarget - gateOpen) * Math.min(Math.abs(gateTarget - gateOpen), 0.06);
+  gateHinge.rotation.y = gateOpen * Math.PI / 2;
+  dirtyShadows();
+  return true;
+});
 export const api = {
   lite,
   THREE, scene, camera, renderer, composer, controls, host, M, B, zone, W, CX, CY, CUT,
@@ -1047,7 +1116,13 @@ export const api = {
   bedroomSlots: bedrooms.slots, obstacles: bedrooms.obstacles,
   // walk mode (walk.js): what it draws with, and the flat's walkable floor
   get walking() { return walking; }, set walking(v) { walking = v; },
-  useView: (v) => { view = v || { camera, composer }; wake(3); }, resizeHooks, shell, labels, roomAt, setDoor: (t) => { doorTarget = t; wake(); },
+  useView: (v) => { view = v || { camera, composer }; wake(3); }, resizeHooks, shell, labels, roomAt,
+  setDoor: (id, t) => {
+    if (typeof t === 'undefined') { doorTarget = id; }
+    else if (id === 'bed1') gateTarget = t;
+    else doorTarget = t;
+    wake();
+  },
   walkFloors: [...zone.floor, { outer: BAY, holes: [] }],
   fitView, focusRoom, showFlat, activeShell, recut: () => { lastKey = ''; cutaway(true); }, resetView: () => (focused ? focusRoom(focused) : showFlat()),
   get focused() { return focused; }, get studioOn() { return studioOn; },

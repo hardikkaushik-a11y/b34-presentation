@@ -27,6 +27,22 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
   const hide = leather({ base: 0xF4F0EA, seed: 53 }), hideN = normalFrom(hide, 2.5);
   const cloth = (c, o = {}) => phys({ color: c, map: weave, normalMap: weaveN, normalScale: new THREE.Vector2(0.6, 0.6),
     roughness: 0.93, sheen: 0.45, sheenRoughness: 0.7, sheenColor: new THREE.Color(c).lerp(new THREE.Color(0xffffff), 0.45), ...o });
+  function patternedFabric(base, colors) {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const x = c.getContext('2d'); x.fillStyle = '#' + new THREE.Color(base).getHexString(); x.fillRect(0, 0, 256, 256);
+    x.lineCap = 'square'; x.lineJoin = 'miter';
+    for (let row = -1; row < 6; row++) for (let col = -1; col < 6; col++) {
+      const ox = col * 54 + (row % 2 ? 27 : 0), oy = row * 48;
+      colors.forEach((color, i) => {
+        const r = 21 - i * 5; x.strokeStyle = '#' + new THREE.Color(color).getHexString(); x.lineWidth = 6 - i;
+        x.beginPath(); x.moveTo(ox, oy + 24 - r); x.lineTo(ox + r, oy + 24); x.lineTo(ox, oy + 24 + r); x.lineTo(ox - r, oy + 24); x.closePath(); x.stroke();
+      });
+    }
+    const map = new THREE.CanvasTexture(c); map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping; map.repeat.set(1.8, 1.8); map.anisotropy = 8;
+    return phys({ map, normalMap: weaveN, normalScale: new THREE.Vector2(0.45, 0.45), roughness: 0.92,
+      sheen: 0.42, sheenRoughness: 0.72, sheenColor: new THREE.Color(0xF1E7D8) });
+  }
   const skin = (c, o = {}) => phys({ color: c, map: hide, normalMap: hideN, normalScale: new THREE.Vector2(0.4, 0.4),
     roughness: 0.48, clearcoat: 0.15, clearcoatRoughness: 0.4, ...o });
   const lacq = (c, r = 0.42, cc = 0.12) => phys({ color: c, roughness: r, clearcoat: cc, clearcoatRoughness: 0.3 });
@@ -48,6 +64,9 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     screen:   phys({ color: 0x060708, roughness: 0.08, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }),
     mirror:   phys({ color: 0xE9ECEE, metalness: 1, roughness: 0.04 }),
     led:      glow(0xFFD9A6, 1.6),
+    heritage: patternedFabric(0xC9BBA5, [0x6F7969, 0x9A5737, 0x4A382E]),
+    roseIkat: patternedFabric(0xD7C6B7, [0xB98068, 0xEEE2D1, 0x92776B]),
+    sageWeave: patternedFabric(0xDDD8CB, [0x9C9D8F, 0xC1BBAE, 0x7C8077]),
     section:  M.section,
   };
 
@@ -227,6 +246,21 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     }
     return g;
   }
+  // Flush warm-taupe doors from the room renders. The Master Bedroom uses the
+  // fluted insert band; Bedroom 2 keeps the same quiet palette with a plain leaf.
+  function designerDoor(root, { box: bounds, face, fluted = false, mat }) {
+    const doorMat = mat || lacq(0xB8AD9C, 0.58, 0.03), trimMat = lacq(0xA99D8B, 0.62, 0.02);
+    const { g, w, d } = frame(root, bounds, face), H = top(2.42), fz = d / 2 + 0.014;
+    g.userData.roomDoor = true;
+    box(g, w, H, 0.025, 0, H / 2, fz, doorMat, 0.003);
+    box(g, w + 0.07, 0.035, 0.035, 0, H - 0.02, fz - 0.008, trimMat, 0.003);
+    for (const sx of [-1, 1]) box(g, 0.035, H, 0.035, sx * (w / 2 + 0.018), H / 2, fz - 0.008, trimMat, 0.003);
+    if (fluted) flutes(g, w - 0.08, 0.72, 1.02, fz + 0.016, 0.033, 0.009, trimMat);
+    const hx = w / 2 - 0.15;
+    const hub = add(g, new THREE.CylinderGeometry(0.026, 0.026, 0.026, 16), K.bronze, hx, 0.93, fz + 0.035); hub.rotation.x = Math.PI / 2;
+    const lever = add(g, new THREE.CylinderGeometry(0.012, 0.012, 0.13, 12), K.bronze, hx - 0.055, 0.93, fz + 0.052); lever.rotation.z = Math.PI / 2;
+    return g;
+  }
   // Bedside table: a body (floating or on the floor), a drawer line, a knob.
   function bedside(root, s) {
     const { g, w, d } = frame(root, s.box, s.face);
@@ -331,7 +365,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
   function bedroom2() {
     const R = new THREE.Group(), rid = 'bed2';
     const S = slots(rid, { floor: ['beigemarble', 0xE3D4C3], walls: ['warmwhite', 0xEDE6DA], feature: ['greige', 0xB9AD9D],
-      upholstery: ['dove', 0xBAB6AF], accent: ['blush', 0xC9A897], joinery: ['linen', 0xE4DED3], rug: ['rosewash', 0xCDBDB2] });
+      upholstery: ['dove', 0xBAB6AF], accent: ['blush', 0xC9A897], joinery: ['linen', 0xE4DED3], doors: ['taupe', 0x978D80], rug: ['rosewash', 0xCDBDB2] });
     floor(R, ring(rid), S.floor);
     // bed wall: taupe panel, onyx arch with a warm edge light
     {
@@ -350,6 +384,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     }
     wardrobe(R, { box: [12.07, 14.50, 3.05, 3.65], face: 'y+', h: 2.45, doors: 4, mat: S.joinery, handle: 'bar', hl: 0.62, hy: 1.05 });
     fixed(rid, [12.07, 14.50, 3.05, 3.65]);
+    designerDoor(R, { box: [14.772, 14.887, 6.681, 7.429], face: 'x-', mat: S.doors });
     // desk under the window: white top on a side panel, a drawer rail
     {
       const { g, w } = frame(R, [14.56, 15.07, 3.67, 4.89], 'x-');
@@ -381,11 +416,11 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
       box(g, 1.89, 0.84, 0.08, 0, 0.66, -0.035, skin(0xEDEAE4), 0.03);
       for (const sx of [-1, 1]) box(g, 0.9, 0.74, 0.09, sx * 0.47, 0.64, 0.02, S.upholstery, 0.04);
       bed(G, { box: [11.90, 13.96, 4.70, 6.62], face: 'x+', plinth: K.black, base: S.upholstery, baseTop: 0.3,
-               mattressTop: 0.54, throw: cloth(0x8E8B86), runner: cloth(0x6E6A64), pillows: 2, pillows2: cloth(0xE8E4DC), cushion: S.accent });
+               mattressTop: 0.54, throw: cloth(0xC4BDB0), runner: K.sageWeave, pillows: 2, pillows2: K.linen, cushion: K.heritage });
     });
     movable(rid, 'chair', 'Desk chair', 'chair', [14.14, 14.69, 3.77, 4.34], G =>
       shellChair(G, [14.14, 14.69, 3.77, 4.34], 'x+', { r: 0.26, seat: 0.47, back: 0.82, open: Math.PI * 1.15,
-        legs: K.chrome, leg: 0.01, seatMat: S.upholstery, shellMat: S.upholstery }));
+        legs: K.gold, leg: 0.01, seatMat: S.upholstery, shellMat: S.upholstery }));
     // quilted bench on dark legs
     movable(rid, 'bench', 'Bench', 'bench', [12.81, 14.16, 7.66, 8.16], G => {
       const { g, w, d } = frame(G, [12.81, 14.16, 7.66, 8.16], 'y-');
@@ -395,7 +430,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
       }
       box(g, w - 0.04, 0.05, d - 0.06, 0, 0.225, 0, K.blackMetal, 0.01);
       const n = 11;
-      for (let i = 0; i < n; i++) box(g, (w - 0.02) / n - 0.006, 0.15, d - 0.02, -w / 2 + 0.01 + (w - 0.02) / n * (i + 0.5), 0.325, 0, S.accent, 0.05);
+      for (let i = 0; i < n; i++) box(g, (w - 0.02) / n - 0.006, 0.15, d - 0.02, -w / 2 + 0.01 + (w - 0.02) / n * (i + 0.5), 0.325, 0, K.roseIkat, 0.05);
     });
     // display cabinet by the door: black frame, fluted glass, lit inside
     movable(rid, 'cabinet', 'Display cabinet', 'cabinet', [14.45, 14.77, 7.63, 8.01], G => {
@@ -416,7 +451,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
   function bedroom1() {
     const R = new THREE.Group(), rid = 'bed1';
     const S = slots(rid, { floor: ['beigemarble', 0xE6DBCC], walls: ['warmwhite', 0xEDE6DA], feature: ['greige', 0xB9AE9F],
-      upholstery: ['stone', 0xD6CDBF], accent: ['cognac', 0x9A5A34], joinery: ['pebble', 0xB8B3AC], woodwork: ['walnut', 0x6A4731],
+      upholstery: ['stone', 0xD6CDBF], accent: ['cognac', 0x9A5A34], joinery: ['pebble', 0xB8B3AC], doors: ['taupe', 0x978D80], woodwork: ['walnut', 0x6A4731],
       rug: ['swirl', 0xD9D6D1] });
     floor(R, ring(rid), S.floor);
     // bed wall: fluted greige panels either side of a gridded panel
@@ -434,6 +469,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     }
     wardrobe(R, { box: [0.224, 0.83, 6.83, 9.71], face: 'x+', h: 2.72, doors: 6, mat: S.joinery, handle: 'star', hy: 1.0 });
     fixed(rid, [0.224, 0.83, 6.83, 9.71]);
+    designerDoor(R, { box: [2.045, 2.09, 8.901, 9.693], face: 'x-', mat: S.doors });
     // TV wall: walnut desk, floating fluted console with a grey marble top, a TV
     {
       const { g, w, d } = frame(R, [2.78, 3.244, 5.68, 6.60], 'x-');
@@ -472,7 +508,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
       box(g, 1.87, 1.12, 0.08, 0, 0.6, -0.015, S.accent, 0.035);
       for (const sx of [-1, 1]) box(g, 0.84, 0.86, 0.07, sx * 0.44, 0.58, 0.03, S.upholstery, 0.04);
       bed(G, { box: [0.36, 2.12, 4.00, 5.88], face: 'x+', base: S.upholstery, baseTop: 0.38, baseR: 0.09, plinth: S.woodwork,
-               mattressTop: 0.6, throw: cloth(0xB9B2A8), runner: cloth(0x3B3936), pillows: 2, cushion: S.accent });
+               mattressTop: 0.6, throw: cloth(0xB9B1A7), runner: cloth(0x4A433D), pillows: 2, pillows2: K.linen, cushion: K.heritage });
     });
     for (const [i, y] of [[3.56, 4.01], [5.89, 6.34]].entries())
       movable(rid, `side${i + 1}`, 'Bedside table', 'side_table', [0.25, 0.69, ...y], G =>
@@ -496,7 +532,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
   function bedroom3() {
     const R = new THREE.Group(), rid = 'bed3';
     const S = slots(rid, { floor: ['darkoak', 0x5E4A3A], walls: ['warmwhite', 0xEDE6DA], feature: ['pebble', 0xB5B0A9],
-      upholstery: ['dove', 0xBAB6AF], accent: ['navy', 0x2F3743], joinery: ['pebble', 0xB8B3AC], woodwork: ['walnut', 0x6A4731] });
+      upholstery: ['dove', 0xBAB6AF], accent: ['charcoal', 0x45484A], joinery: ['pebble', 0xB8B3AC], doors: ['taupe', 0x978D80], woodwork: ['walnut', 0x6A4731] });
     floor(R, floors.bed3, S.floor);
     // the floor runs on into her window bay, up to its glass and the sliding door
     floor(R, [[8.40, 13.427], [8.40, 14.392], [10.60, 14.392], [10.60, 13.65], [11.61, 13.65], [11.61, 13.218], [8.569, 13.218], [8.569, 13.427], [8.40, 13.427]], S.floor);
@@ -523,6 +559,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     wardrobe(R, { box: [7.95, 8.569, 10.06, 12.52], face: 'x+', h: 2.46, doors: 5, mat: S.joinery,
                   wave: { y: 1.0, a: 0.13, k: 1.5, p: 0.4 } });
     fixed(rid, [7.95, 8.569, 10.06, 12.52]);
+    designerDoor(R, { box: [7.474, 7.519, 10.08, 10.749], face: 'x+', mat: S.doors });
     // desk: white top on black steel legs, a two-drawer pedestal, black wall shelves
     {
       const { g, w, d } = frame(R, [8.57, 10.39, 9.336, 9.89], 'y+');
@@ -540,11 +577,11 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     // her drapes follow the bay: across the sliding door, along the north glass, round
     // the step
     curtains(R, rid, [[8.60, 13.46], [8.60, 14.33], [10.53, 14.33], [10.53, 13.72], [11.56, 13.72]],
-             { color: 0xA89A8A, gather: [[0, 1], [1, 0], [1, 2], [2, 1], [3, 4], [4, 3]] });
+             { color: 0x9A8D7E, gather: [[0, 1], [1, 0], [1, 2], [2, 1], [3, 4], [4, 3]] });
 
     movable(rid, 'bed', 'Bed', 'bed', [9.49, 11.46, 10.98, 12.82], G =>
       bed(G, { box: [9.49, 11.46, 10.98, 12.82], face: 'x-', base: S.upholstery, baseTop: 0.36, baseR: 0.06,
-               plinth: K.black, mattressTop: 0.59, throw: cloth(0x9DA9B6), runner: S.accent, pillows: 2, pillow: S.accent, pillows2: K.linen }));
+               plinth: K.black, mattressTop: 0.59, throw: cloth(0xC5CCD1), runner: cloth(0x3D4144), pillows: 2, pillow: cloth(0x3D4144), pillows2: K.linen }));
     movable(rid, 'chair', 'Desk chair', 'chair', [9.63, 10.11, 9.86, 10.32], G => walnutChair(G, [9.63, 10.11, 9.86, 10.32], 'y-', S.woodwork));
     cladRooms[rid] = cladding(rid, ring(rid), S.walls);
     return R;
@@ -558,8 +595,10 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
   function master() {
     const R = new THREE.Group(), rid = 'master';
     const S = slots(rid, { floor: ['dovemarble', 0xDCD9D4], walls: ['warmwhite', 0xEDE6DA], upholstery: ['stone', 0xD6CDBF],
-      accent: ['cognac', 0x8E5530], joinery: ['linen', 0xE4DED3], woodwork: ['walnut', 0x6A4731], rug: ['agate', 0xE7DCCB] });
+      accent: ['cognac', 0x8E5530], joinery: ['linen', 0xE4DED3], doors: ['taupe', 0x978D80], woodwork: ['walnut', 0x6A4731], rug: ['agate', 0xE7DCCB] });
     floor(R, ring(rid), S.floor);
+    designerDoor(R, { box: [10.696, 11.61, 9.222, 9.336], face: 'y+', fluted: true, mat: S.doors });
+    designerDoor(R, { box: [14.772, 14.887, 9.017, 9.781], face: 'x-', fluted: true, mat: S.doors });
     {
       const { g, w } = frame(R, [11.724, 11.83, 9.22, 12.07], 'x+');
       channels(g, w, 1.25, 0.1, 0, 0, 0.16, S.upholstery);
@@ -568,7 +607,7 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
     }
     // chest of drawers: sixteen drawers, gold knobs, a brown-grey marble top
     {
-      const { g, w, d } = frame(R, [12.76, 14.74, 8.29, 8.79], 'y+'), body = lacq(0xB5B0A8, 0.5);
+      const { g, w, d } = frame(R, [12.76, 14.74, 8.29, 8.79], 'y+'), body = lacq(0x91897E, 0.56, 0.05);
       box(g, w, 0.08, d - 0.04, 0, 0.04, -0.02, K.black, 0.004);
       box(g, w, 0.8, d - 0.02, 0, 0.48, -0.01, body, 0.004);
       const cols = 4, rows = 4, cw = w / cols, rh = 0.8 / rows;
@@ -613,19 +652,19 @@ export function buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRi
       box(g, 0.003, 0.49, 0.004, 0, 0.27, d / 2 + 0.001, K.groove, 0.001);
       fixed(rid, [16.36, 17.44, 10.01, 10.56]);
     }
-    curtains(R, rid, [[14.95, 12.47], [17.62, 12.47], [17.62, 10.05]], { color: 0x7F8784, gather: [[0, 1], [1, 0], [1, 2], [2, 1]] });
+    curtains(R, rid, [[14.95, 12.47], [17.62, 12.47], [17.62, 10.05]], { color: 0x77716B, gather: [[0, 1], [1, 0], [1, 2], [2, 1]] });
 
     movable(rid, 'rug', 'Rug', 'rug', [12.53, 14.05, 9.39, 11.83], G => rug(G, [12.53, 14.05, 9.39, 11.83], S.rug));
     movable(rid, 'bed', 'Bed', 'bed', [11.83, 13.62, 9.76, 11.57], G =>
       bed(G, { box: [11.83, 13.62, 9.76, 11.57], face: 'x+', base: S.upholstery, baseTop: 0.34, baseR: 0.09, plinth: K.black,
-               mattressTop: 0.58, throw: cloth(0x6B5647), throwD: 0.9, pillows: 2, pillows2: cloth(0xE4DDD0), cushion: S.accent }));
+               mattressTop: 0.58, throw: cloth(0x6B5647), throwD: 0.9, pillows: 2, pillows2: cloth(0xE4DDD0), cushion: K.heritage }));
     for (const [i, y] of [[9.25, 9.73], [11.58, 12.06]].entries())
       movable(rid, `side${i + 1}`, 'Bedside table', 'side_table', [11.84, 12.21, ...y], G =>
         bedside(G, { box: [11.84, 12.21, ...y], face: 'x+', z0: 0, z1: 0.42, body: lacq(0x8E8B86, 0.5), topMat: K.black, drawer: 0.14 }));
     movable(rid, 'chair', 'Desk chair', 'chair', [15.02, 15.52, 10.36, 10.87], G => walnutChair(G, [15.02, 15.52, 10.36, 10.87], 'y-', S.woodwork));
     // lounge: two leather shell chairs turned toward each other, a stone drum table
     const shellSpec = { r: 0.37, seat: 0.36, back: 0.96, open: Math.PI * 1.2, legs: S.woodwork, leg: 0.016, seatH: 0.12,
-                        seatMat: S.upholstery, shellMat: S.accent, lining: S.upholstery, cushion: S.accent };
+                        seatMat: S.upholstery, shellMat: S.accent, lining: S.upholstery, cushion: K.heritage };
     movable(rid, 'lounge1', 'Lounge chair', 'armchair', [15.34, 16.13, 11.47, 12.30], G => shellChair(G, [15.34, 16.13, 11.47, 12.30], [0.34, -0.94], shellSpec));
     movable(rid, 'lounge2', 'Lounge chair', 'armchair', [16.54, 17.29, 11.48, 12.30], G => shellChair(G, [16.54, 17.29, 11.48, 12.30], [-0.34, -0.94], shellSpec));
     movable(rid, 'drum', 'Side table', 'side_table', [16.14, 16.54, 11.86, 12.26], G => {

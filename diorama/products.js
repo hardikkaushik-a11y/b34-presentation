@@ -1,8 +1,9 @@
 // Real products for B-34, as options in the diorama.
 //
 // From the owner's picks (28 Sep 2026): Kohler vessel basins and Rain Max square
-// rainheads per washroom, patterned balcony floor with a plain tile wall on the
-// Bedroom 3 side, and a highlighter wall in the master washroom. Dining sets from two
+// rainheads per washroom, the supplied patterned balcony floor with its plain tile
+// walls and ceiling, the same plain tile throughout Toilet 4, and a highlighter wall
+// in the master washroom. Dining sets from two
 // reference pins. Sizes are the makers' published sizes; where a listing was
 // inconsistent the product name wins (noted beside it).
 import * as THREE from 'three';
@@ -41,48 +42,29 @@ export function createProducts(api) {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.repeat.set(1 / uM, 1 / vM); return t;
   }
+  function photoTile(url, uM, vM, mirror = false) {
+    const t = new THREE.TextureLoader().load(url, () => api.wake?.(4));
+    t.colorSpace = THREE.SRGBColorSpace;
+    // Organic wall patterns repeat in one orientation. The balcony's symmetric
+    // geometric motif uses a mirrored edge so the photographed crop has no stripe.
+    t.wrapS = t.wrapT = mirror ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
+    t.anisotropy = 8;
+    t.repeat.set(1 / uM, 1 / vM);
+    return t;
+  }
   function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
   function speckle(x, N, H, amt, seed) {
     const r = rng(seed), img = x.getImageData(0, 0, N, H), d = img.data;
     for (let i = 0; i < d.length; i += 4) { const k = 1 + (r() - 0.5) * amt; d[i] *= k; d[i + 1] *= k; d[i + 2] *= k; }
     x.putImageData(img, 0, 0);
   }
-  // encaustic-style patterned floor tile (grey motif on pale grey), 20 cm tiles
-  function encaustic() {
-    const N = 512, T = 256, [c, x] = canvas(N), base = '#DCDCD9', ink = '#7D8185';
-    for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
-      const ox = tx * T, oy = ty * T, m = T / 2;
-      x.save(); x.translate(ox, oy);
-      x.fillStyle = base; x.fillRect(0, 0, T, T);
-      x.fillStyle = ink;
-      for (const [cx, cy] of [[0, 0], [T, 0], [0, T], [T, T]]) { x.beginPath(); x.arc(cx, cy, T * 0.2, 0, Math.PI * 2); x.fill(); }
-      x.fillStyle = base; for (const [cx, cy] of [[0, 0], [T, 0], [0, T], [T, T]]) { x.beginPath(); x.arc(cx, cy, T * 0.12, 0, Math.PI * 2); x.fill(); }
-      x.translate(m, m);
-      x.fillStyle = ink;
-      for (const a of [0, Math.PI / 4]) { x.save(); x.rotate(a); x.fillRect(-T * 0.22, -T * 0.22, T * 0.44, T * 0.44); x.restore(); }
-      x.fillStyle = base; x.beginPath(); x.arc(0, 0, T * 0.17, 0, Math.PI * 2); x.fill();
-      x.fillStyle = ink;
-      for (let k = 0; k < 8; k++) { x.save(); x.rotate(k * Math.PI / 4); x.beginPath(); x.ellipse(0, -T * 0.085, T * 0.028, T * 0.07, 0, 0, Math.PI * 2); x.fill(); x.restore(); }
-      x.beginPath(); x.arc(0, 0, T * 0.03, 0, Math.PI * 2); x.fill();
-      for (const [dx, dy] of [[0, -m], [0, m], [-m, 0], [m, 0]]) { x.save(); x.translate(dx, dy); x.rotate(Math.PI / 4); x.fillRect(-T * 0.05, -T * 0.05, T * 0.1, T * 0.1); x.restore(); }
-      x.restore();
-      x.strokeStyle = '#A9ABAA'; x.lineWidth = 2; x.strokeRect(ox + 1, oy + 1, T - 2, T - 2);
-    }
-    speckle(x, N, N, 0.06, 81);
-    return tex(c, 0.4, 0.4);
-  }
-  // large-format plain tile, 60 x 120 cm, with a faint cloud and joints
+  // Large-format plain tile, 60 x 120 cm. Keep the face even: the earlier radial
+  // clouds read as triangular stains once the texture repeated across a room.
   function plainTile(base, seed = 83) {
-    const [c, x] = canvas(256, 512), r = rng(seed);
+    const [c, x] = canvas(256, 512);
     x.fillStyle = hex(base); x.fillRect(0, 0, 256, 512);
-    for (let k = 0; k < 14; k++) {
-      const g = x.createRadialGradient(r() * 256, r() * 512, 0, r() * 256, r() * 512, 60 + r() * 140);
-      const col = new THREE.Color(base).multiplyScalar(0.94 + r() * 0.1);
-      g.addColorStop(0, `rgba(${col.r * 255 | 0},${col.g * 255 | 0},${col.b * 255 | 0},0.12)`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = g; x.fillRect(0, 0, 256, 512);
-    }
-    speckle(x, 256, 512, 0.03, seed);
-    x.strokeStyle = hex(new THREE.Color(base).multiplyScalar(0.78)); x.lineWidth = 2; x.strokeRect(1, 1, 254, 510);
+    speckle(x, 256, 512, 0.012, seed);
+    x.strokeStyle = hex(new THREE.Color(base).multiplyScalar(0.82)); x.lineWidth = 1.25; x.strokeRect(0.75, 0.75, 254.5, 510.5);
     return tex(c, 0.6, 1.2);
   }
   // highlighter slab: one large agate section per 1.2 x 2.4 m panel (after the showroom
@@ -111,13 +93,25 @@ export function createProducts(api) {
     x.strokeStyle = '#141414'; x.lineWidth = 2; x.strokeRect(1, 1, W_ - 2, H_ - 2);
     return tex(c, 1.2, 2.4);
   }
-  const tileMat = (map, o = {}) => withRelief(map, 1.2, { roughness: 0.22, clearcoat: 0.35, clearcoatRoughness: 0.1, ...o });
+  const tileMat = (map, o = {}) => withRelief(map, 1.2, { roughness: 0.22, clearcoat: 0.35, clearcoatRoughness: 0.1,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, ...o });
+  const photoMat = (map, o = {}) => phys({ map, roughness: 0.48, clearcoat: 0.08, clearcoatRoughness: 0.5,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, ...o });
   const TILES = {
-    encaustic: () => tileMat(encaustic(), { roughness: 0.35, clearcoat: 0.15 }),
-    plainGrey: () => tileMat(plainTile(0x9A958E, 84)),
-    plainLight: () => tileMat(plainTile(0xC8C7C3, 85)),
-    geode: () => tileMat(agate([0x9FB0B6, 0xE9E6DF, 0x5F7C83, 0xB08B4E, 0x3B4A52, 0xD7D2C8], 91), { roughness: 0.15, clearcoat: 0.6 }),
-    emerald: () => tileMat(agate([0x1F5A55, 0x2F7D6F, 0x0F2B2A, 0xB9934A, 0x6FA89A, 0x163A38], 92), { roughness: 0.15, clearcoat: 0.6 }),
+    // Actual motif extracted and perspective-corrected from the supplied sample.
+    // The physical tile size is not confirmed. A 90 cm visual repeat keeps the actual
+    // motif legible in the client view while retaining the supplied tile design.
+    encaustic: () => phys({ map: photoTile('../assets/diorama/reference/balcony-floor-tile.jpg', 0.9, 0.9, true), color: 0xC9C7C2,
+                            roughness: 0.94, clearcoat: 0, envMapIntensity: 0.35, polygonOffset: true,
+                            polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+    plainGrey: () => tileMat(plainTile(0x9A958E, 84), { roughness: 0.46, clearcoat: 0.08, clearcoatRoughness: 0.45 }),
+    plainLight: () => photoMat(photoTile('../assets/diorama/reference/light-grey-plain-tile.jpg', 0.6, 1.2)),
+    striated: () => photoMat(photoTile('../assets/diorama/reference/t2-highlight-tile.jpg', 0.6, 1.2), { roughness: 0.64, clearcoat: 0.04, clearcoatRoughness: 0.6 }),
+    // Keep the historical keys as aliases so old shared links/local state migrate to
+    // the supplied Toilet 3 sample instead of reviving the earlier invented agate.
+    geode: () => photoMat(photoTile('../assets/diorama/reference/t3-highlight-tile.jpg', 0.6, 1.2)),
+    emerald: () => photoMat(photoTile('../assets/diorama/reference/t3-highlight-tile.jpg', 0.6, 1.2)),
+    botanical: () => photoMat(photoTile('../assets/diorama/reference/t4-highlight-tile.jpg', 0.6, 1.2)),
   };
   const tileCache = {};
   const tile = (k) => tileCache[k] || (tileCache[k] = TILES[k]());
@@ -300,19 +294,21 @@ export function createProducts(api) {
         { id: 'chrome', name: 'Polished chrome' }, { id: 'bronze', name: 'Brushed bronze' },
         { id: 'black', name: 'Matte black' }, { id: 'gold', name: 'French gold' }] },
     ]),
-    { key: 't3walls', label: 'Walls and floor', rooms: ['tlt3'], options: [
-      { id: 'geode', name: 'Highlighter wall, grey', note: 'agate highlighter + plain' },
-      { id: 'emerald', name: 'Emerald highlighter, grey', note: 'second highlighter sample' },
-      { id: 'marble', name: 'Beige marble all walls' }] },
+    { key: 't2walls', label: 'Walls', rooms: ['tlt2'], options: [
+      { id: 'plain', name: 'Vertical highlight + plain', note: 'supplied Toilet 2 tiles' }] },
+    { key: 't3walls', label: 'Walls', rooms: ['tlt3'], options: [
+      { id: 'geode', name: 'Geometric highlight + plain', note: 'supplied Toilet 3 tiles' }] },
     { key: 'balconyFloor', label: 'Balcony floor', rooms: ['balcony'], options: [
-      { id: 'patterned', name: 'Patterned tile', note: '20 cm, grey motif' },
+      { id: 'patterned', name: 'Grey heritage motif', note: 'supplied design tile' },
       { id: 'plain', name: 'Same as the flat' }] },
-    { key: 'balconyWall', label: 'Bedroom 3 side wall', rooms: ['balcony'], options: [
-      { id: 'plain', name: 'Plain grey tile', note: '60 × 120 cm' },
+    { key: 'balconyWall', label: 'Balcony walls and ceiling', rooms: ['balcony'], options: [
+      { id: 'plain', name: 'Warm grey textured tile', note: 'supplied plain tile' },
       { id: 'paint', name: 'Paint, like the rest' }] },
+    { key: 't4tiles', label: 'Walls, floor and ceiling', rooms: ['tlt4'], options: [
+      { id: 'plain', name: 'Botanical highlight + plain', note: 'supplied Toilet 4 tiles' }] },
   ];
   // the owner's picks are the starting point
-  const DEFAULTS = { table: 'drawn', chair: 'drawn', t3walls: 'geode', balconyFloor: 'patterned', balconyWall: 'plain',
+  const DEFAULTS = { table: 'drawn', chair: 'drawn', t2walls: 'plain', t3walls: 'geode', balconyFloor: 'patterned', balconyWall: 'plain', t4tiles: 'plain',
     'basin.tlt1': 'mica', 'basin.tlt2': 'mica', 'basin.tlt3': 'mica', 'basin.tlt4': 'edge',
     'shower.tlt1': '254', 'shower.tlt2': '305', 'shower.tlt3': '305', 'shower.tlt4': '254',
     'finish.tlt1': 'chrome', 'finish.tlt2': 'chrome', 'finish.tlt3': 'chrome', 'finish.tlt4': 'bronze' };
@@ -381,6 +377,22 @@ export function createProducts(api) {
     const r = room(ringId), m = prism(r.outline, [], -0.004, -0.001, mat);
     m.castShadow = false; return m;
   }
+  function cladMasonry(group, ringId, mat) {
+    for (const w of room(ringId).walls || []) {
+      if (!w.kind?.includes('masonry')) continue;
+      const m = prism(w.outer, w.holes || [], w.z0, w.z1, mat, mat);
+      const cx = w.outer.reduce((a, q) => a + q[0], 0) / w.outer.length;
+      const cy = w.outer.reduce((a, q) => a + q[1], 0) / w.outer.length;
+      m.userData.wall = { z0: w.z0, z1: w.z1, cx, cy, kind: w.kind, outer: w.outer };
+      group.add(m);
+    }
+  }
+  function tiledCeiling(group, ringId, mat) {
+    const m = prism(room(ringId).outline, [], 2.82, 2.84, mat, mat);
+    m.castShadow = false;
+    m.userData.ceiling = true;
+    group.add(m);
+  }
   const tileGroups = {};
   function setTiles(key, group) {
     if (tileGroups[key]) scene.remove(tileGroups[key]);
@@ -395,6 +407,17 @@ export function createProducts(api) {
     }
     return out;
   };
+  function basinFeatureEdge(ringId) {
+    const ring = room(ringId).outline;
+    const basin = zone.pieces.find(q => q.home === ringId && q.type === 'basin');
+    if (!basin) return 0;
+    let feature = 0, fd = Infinity;
+    for (let i = 0; i < ring.length - 1; i++) {
+      const d = segDist([basin.obb.cx, basin.obb.cy], ring[i], ring[i + 1]);
+      if (d < fd) { fd = d; feature = i; }
+    }
+    return feature;
+  }
 
   // ---------------------------------------------------------------- apply
   let applied = {};
@@ -416,14 +439,18 @@ export function createProducts(api) {
       p.name = `Kohler Rain Max square ${size === '305' ? '30.5' : '25.4'} cm, ${GROUPS.find(q => q.key === `finish.${t}`).options.find(o => o.id === fin).name.toLowerCase()}`;
       rebuild(g, BUILD.rain_shower);
     }
+    if (applied.t2walls !== s.t2walls) {
+      const ring = room('tlt2').outline, feature = basinFeatureEdge('tlt2');
+      const g = panels('tlt2', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile('striated') : tile('plainLight'), 't2walls');
+      g.add(inlay('tlt2', tile('plainLight')));
+      setTiles('t2walls', g);
+    }
     if (applied.t3walls !== s.t3walls) {
       const t3 = scene.children.find(o => o.userData.cladding && o.userData.room === 'tlt3' && !o.userData.product);
       if (s.t3walls === 'marble') { if (t3) t3.userData.off = false; setTiles('t3', null); }
       else {
         if (t3) { t3.userData.off = true; t3.visible = false; }
-        const ring = room('tlt3').outline, basin = zone.pieces.find(q => q.home === 'tlt3' && q.type === 'basin');
-        let feature = 0, fd = Infinity;
-        for (let i = 0; i < ring.length - 1; i++) { const d = segDist([basin.obb.cx, basin.obb.cy], ring[i], ring[i + 1]); if (d < fd) { fd = d; feature = i; } }
+        const ring = room('tlt3').outline, feature = basinFeatureEdge('tlt3');
         const g = panels('tlt3', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile(s.t3walls) : tile('plainLight'), 't3');
         g.add(inlay('tlt3', tile('plainLight')));
         setTiles('t3', g);
@@ -432,8 +459,15 @@ export function createProducts(api) {
     if (applied.balconyFloor !== s.balconyFloor || applied.balconyWall !== s.balconyWall) {
       const g = new THREE.Group(); g.userData.cladding = true; g.userData.room = 'balcony'; g.userData.product = 'balcony';
       if (s.balconyFloor === 'patterned') g.add(inlay('balcony', tile('encaustic')));
-      if (s.balconyWall === 'plain') { const w = panels('balcony', nearEdges('balcony', 'bed3', 0.4), () => tile('plainGrey'), 'bw'); for (const c of [...w.children]) g.add(c); }
+      if (s.balconyWall === 'plain') { cladMasonry(g, 'balcony', tile('plainGrey')); tiledCeiling(g, 'balcony', tile('plainGrey')); }
       setTiles('balcony', g);
+    }
+    if (applied.t4tiles !== s.t4tiles) {
+      const ring = room('tlt4').outline, feature = basinFeatureEdge('tlt4');
+      const g = panels('tlt4', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile('botanical') : tile('plainGrey'), 't4tiles');
+      g.add(inlay('tlt4', tile('plainGrey')));
+      tiledCeiling(g, 'tlt4', tile('plainGrey'));
+      setTiles('t4tiles', g);
     }
     applied = s;
     for (const g of Object.values(tileGroups)) if (g) g.visible = !api.focused || (api.focused.members || [api.focused.id]).includes(g.userData.room);
@@ -457,6 +491,6 @@ export function createProducts(api) {
     return null;
   }
   function rectRing(w, d) { const x0 = CX - w / 2, y0 = CY - d / 2; return [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d], [x0, y0]]; }
-  const tileSwatch = { geode: 'geode', emerald: 'emerald', marble: null, patterned: 'encaustic', plain: 'plainGrey' };
+  const tileSwatch = { geode: 'geode', emerald: 'geode', marble: null, patterned: 'encaustic', plain: 'plainGrey', botanical: 'botanical', striated: 'striated' };
   return { GROUPS, DEFAULTS, apply, roundChairPoses, thumbPiece, tile, tileSwatch, MP };
 }
