@@ -243,9 +243,27 @@ const bedroomFloors = Object.values(bedrooms.floors);
 const floorCuts = (f) => bedroomFloors.filter(ring => ring.every(p => inRing(p, f.outer))
   && !f.holes.some(h => h.some(p => inRing(p, ring)) || ring.some(p => inRing(p, h))));
 
+// Door leaves in the CAD shell. Their centres identify the actual openings, including
+// the shorter leaf fragments copied into each room's cutaway shell.
+const roomDoors = [
+  { x: 1.687, y: 7.112, rooms: ['bed1', 'tlt1'] },
+  { x: 3.187, y: 7.022, rooms: ['living', 'tlt1'] },
+  { x: 14.829, y: 7.047, rooms: ['bed2', 'tlt2'] },
+  { x: 14.829, y: 9.399, rooms: ['master', 'tlt3'] },
+  { x: 9.712, y: 8.841, rooms: ['lobby', 'tlt4'] },
+  { x: 9.290, y: 7.755, rooms: ['dining', 'tlt4'] },
+  { x: 15.242, y: 8.337, rooms: ['tlt2', 'tlt3'] },
+  { x: 11.153, y: 9.279, rooms: ['lobby', 'bed3'] },
+];
+const entryDoors = [
+  { x: 11.677, y: 8.752, y0: 8.282, y1: 9.222, rooms: ['lobby', 'master'] },
+  { x: 11.677, y: 7.538, y0: 7.068, y1: 8.008, rooms: ['lobby', 'bed2'] },
+  { x: 3.302, y: 2.870, y0: 2.413, y1: 3.327, rooms: ['entrance', 'bed1'] },
+];
+
 // ------------------------------------------------------------------ the shell
 // One builder for both views: the whole flat, and a single room on its own plinth.
-function buildShell(group, { plinth, floor, walls, glass }) {
+function buildShell(group, { plinth, floor, walls, glass, ownerIds = null }) {
   // like a physical model on a base (a merged space stands on each member's base)
   for (const ring of Array.isArray(plinth[0][0]) ? plinth : [plinth]) group.add(prism(ring, [], -0.42, -0.021, M.plinth));
   // Floors cast no shadow: laid a few mm above the floor, a tile inlay caught the
@@ -260,6 +278,11 @@ function buildShell(group, { plinth, floor, walls, glass }) {
     const m = prism(w.outer, w.holes, w.z0, w.z1, mat, cut ? M.section : cap);
     const cx = w.outer.reduce((a, q) => a + q[0], 0) / w.outer.length, cy = w.outer.reduce((a, q) => a + q[1], 0) / w.outer.length;
     m.userData.wall = { z0: w.z0, z1: w.z1, cx, cy, kind: w.kind, outer: w.outer };
+    if (k.includes('door_leaf')) {
+      const route = roomDoors.find(d => Math.hypot(d.x - cx, d.y - cy) < 0.2 &&
+        (!ownerIds || d.rooms.some(id => ownerIds.includes(id))));
+      if (route) { m.userData.door = true; m.userData.doorRoute = route; }
+    }
     group.add(m);
   }
   for (const g of glass) {
@@ -361,6 +384,24 @@ gateHandle.rotation.x = Math.PI / 2; gateHinge.add(gateHandle);
 bed1Link.add(gateHinge); scene.add(bed1Link);
 let gateOpen = 0, gateTarget = 0;
 const doorLinks = [link, bed1Link];
+
+// Three bedroom entry thresholds have a doorway in the plan but no CAD leaf.
+// Give each its own leaf and click target; walk mode hides these leaves as it does
+// the bedroom model's doors, so the physical route remains open.
+for (const route of entryDoors) {
+  const { x, y0, y1 } = route, g = new THREE.Group(), y = (y0 + y1) / 2;
+  g.userData.cladding = true; g.userData.rooms = route.rooms;
+  const p = W(x, y);
+  const leaf = mesh(new THREE.BoxGeometry(0.045, CUT, y1 - y0).translate(0, CUT / 2, 0), M.door, p.x, 0, p.z);
+  leaf.userData.door = true; leaf.userData.doorRoute = route; leaf.userData.roomDoor = true;
+  leaf.userData.wall = { z0: 0, z1: CUT, cx: x, cy: y, kind: 'door_leaf_appearance' };
+  g.add(leaf);
+  const handle = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.14, 12), M.brass,
+    -0.05, 1.0, -(y1 - y0) / 2 + 0.14);
+  handle.rotation.z = Math.PI / 2;
+  handle.userData.door = true; handle.userData.doorRoute = route; handle.userData.roomDoor = true;
+  leaf.add(handle); scene.add(g); doorLinks.push(g);
+}
 
 // ------------------------------------------------------------------ furniture
 const pieces = new THREE.Group(); scene.add(pieces);
@@ -865,7 +906,14 @@ async function focusRoom(r) {
   if (r.space) r = spaces[r.space];
   focused = r;
   const members = r.members || [r.id];
-  if (!focusCache[r.id]) focusCache[r.id] = buildShell(new THREE.Group(), { plinth: r.plinths || r.island, floor: r.floor, walls: r.walls, glass: r.glass });
+  if (!focusCache[r.id]) {
+    // The dining-side Toilet 4 leaf belongs to the washroom shell in the CAD
+    // export. Include that single leaf when the shared living area is isolated.
+    const publicDoors = r.id === 'public' ? zone.walls.filter(w => w.kind.includes('door_leaf') &&
+      w.outer.some(([x, y]) => Math.hypot(x - 9.290, y - 7.755) < 0.5)) : [];
+    focusCache[r.id] = buildShell(new THREE.Group(), { plinth: r.plinths || r.island, floor: r.floor,
+      walls: [...r.walls, ...publicDoors], glass: r.glass, ownerIds: members });
+  }
   focusGroup = focusCache[r.id];
   if (!focusGroup.parent) scene.add(focusGroup);
   for (const g of Object.values(focusCache)) g.visible = g === focusGroup;
@@ -958,6 +1006,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
+  if (pickDoor()) return;
   const hit = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
   const room = hit && roomAt(hit.x + CX, CY - hit.z);
   if (room) focusRoom(room);
@@ -968,15 +1017,41 @@ function roomAt(px, py) {
   return zone.rooms.filter(q => inRing([px, py], q.outline)).sort((a, b) => ringArea(a.outline) - ringArea(b.outline))[0] || null;
 }
 
-// Both balcony doors open and take you to the room on the other side.
+function doorDestination(route) {
+  const here = focused?.members || (focused ? [focused.id] : []);
+  const from = route.rooms.find(id => here.includes(id));
+  return from ? route.rooms.find(id => id !== from) : route.rooms.find(id => id.startsWith('tlt')) || route.rooms[1];
+}
+function pickDoor() {
+  const here = focused?.members || (focused ? [focused.id] : []);
+  const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+  return ray.intersectObjects([...doorLinks, activeShell()], true).find(h =>
+    h.object.userData.door && shown(h.object) &&
+    (!h.object.userData.doorRoute || !focused || h.object.userData.doorRoute.rooms.some(id => here.includes(id))));
+}
+
+// The CAD door leaves and balcony gates take you to the room on the other side.
+let doorTransition = false;
 renderer.domElement.addEventListener('pointerup', e => {
-  if (walking || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (walking || doorTransition || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const r = renderer.domElement.getBoundingClientRect();
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const vis = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
-  const hit = ray.intersectObjects(doorLinks, true).find(h => h.object.userData.door && vis(h.object));
+  const hit = pickDoor();
   if (!hit) return;
+  const route = hit.object.userData.doorRoute;
+  if (route) {
+    const to = doorDestination(route), leaf = hit.object.userData.wall ? hit.object :
+      (hit.object.parent?.userData.wall ? hit.object.parent : hit.object), from = focused;
+    doorTransition = true;
+    leaf.visible = false; dirtyShadows();
+    setTimeout(() => {
+      leaf.visible = true;
+      doorTransition = false;
+      if (focused === from) focusRoom(zone.rooms.find(q => q.id === to));
+    }, 250);
+    return;
+  }
   let o = hit.object, doorId = o.userData.doorId;
   while (!doorId && o.parent) { o = o.parent; doorId = o.userData.doorId; }
   if (doorId === 'bed1') gateTarget = 1;
@@ -1031,16 +1106,23 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   }
   const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
   // curtains and sheers never block the pointer: the door behind a sheer still answers
-  const hit = ray.intersectObjects([pieces, models, ...doorLinks], true).find(h => shown(h.object) && !h.object.userData.curtain && (h.object.userData.piece || h.object.userData.model || h.object.userData.door));
+  const hit = ray.intersectObjects([pieces, models, ...doorLinks, activeShell()], true).find(h => shown(h.object) && !h.object.userData.curtain &&
+    (h.object.userData.piece || h.object.userData.model || (h.object.userData.door &&
+      (!h.object.userData.doorRoute || !focused || h.object.userData.doorRoute.rooms.some(id => (focused.members || [focused.id]).includes(id))))));
   const u = hit?.object.userData || {};
   let doorId = u.doorId;
   if (u.door && !doorId) { let o = hit?.object; while (o?.parent && !doorId) { o = o.parent; doorId = o.userData.doorId; } }
-  const key = u.door ? `door-${doorId || 'bed3'}` : u.piece || u.model || null;
+  const key = u.door ? `door-${u.doorRoute ? `${u.doorRoute.x},${u.doorRoute.y}` : doorId || 'bed3'}` : u.piece || u.model || null;
   if (key !== hovered) {
     hovered = key;
     if (u.door) {
-      const bedroom = doorId === 'bed1' ? 'Bedroom 1' : 'Bedroom 3';
-      tip.innerHTML = `<b>${doorId === 'bed1' ? 'Balcony gate' : 'Sliding door'}</b><i>Click to go through to ${focused?.id === (doorId || 'bed3') ? 'the balcony' : bedroom}</i>`;
+      if (u.doorRoute) {
+        const dest = zone.rooms.find(q => q.id === doorDestination(u.doorRoute));
+        tip.innerHTML = `<b>Door to ${dest.name}</b><i>Click to go through</i>`;
+      } else {
+        const bedroom = doorId === 'bed1' ? 'Bedroom 1' : 'Bedroom 3';
+        tip.innerHTML = `<b>${doorId === 'bed1' ? 'Balcony gate' : 'Sliding door'}</b><i>Click to go through to ${focused?.id === (doorId || 'bed3') ? 'the balcony' : bedroom}</i>`;
+      }
       tip.hidden = false;
     } else if (u.piece) {
       const p = u.piece;

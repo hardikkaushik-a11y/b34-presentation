@@ -1,5 +1,12 @@
 # Diorama - handover (branch `claude/diorama-v2-wip`)
 
+## Update - 2026-09-29: Room and washroom door travel
+
+- `diorama/diorama.js` maps CAD door leaves to the rooms on either side. Click a visible door to focus the adjoining room, including Bedroom 1/Toilet 1, Bedroom 2/Toilet 2, Master/Toilet 3, Lobby/Toilet 4, and the additional Toilet 1, 2, 3 and 4 connections shown in the drawing. Bedroom 3/Lobby is linked too.
+- The plan has thresholds but no rendered leaf at the Lobby/Master, Lobby/Bedroom 2, and Foyer/Bedroom 1 entries. Those now have styled clickable leaves. The shared living area includes Toilet 4's dining-side leaf when isolated.
+- The door opens briefly before changing the focused room. Walk mode still hides door leaves and uses its existing pathfinding through the flat; `diorama/walk.js` was not changed.
+- Local browser checks covered Master to Toilet 3, Toilet 3 to Toilet 2, Toilet 2 to Bedroom 2, Bedroom 2 to Toilet 2, Bedroom 1 to Toilet 1, Toilet 4 to Lobby, dining to Toilet 4, and Lobby to Bedroom 2. `node --check` and `git diff --check` pass.
+
 ## Update - 2026-09-29: Bedroom 2 wardrobe crop
 
 - The earlier follow-up commit `f4df5a4` shortened a provisional sill wall, but the user's screenshot showed the door-side wardrobe still looked cropped. That sill edit has been removed.
