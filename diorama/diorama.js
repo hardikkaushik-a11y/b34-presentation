@@ -156,6 +156,11 @@ std('steel',    { color: 0xC7C9CB, metalness: 1, roughness: 0.28 });
 std('darkglass',{ color: 0x0E0F10, metalness: 0.2, roughness: 0.06 });
 std('screen',   { color: 0x070707, metalness: 0.1, roughness: 0.12, emissive: 0x05070a });
 std('ceramic',  { color: 0xF3F1ED, roughness: 0.18 });
+// Kohler Trace-inspired white vitreous china and its slim closed seat. Kept
+// separate from basins so those materials remain as designed.
+std('wcChina',  { color: 0xF8F8F5, roughness: 0.13, clearcoat: 0.45, clearcoatRoughness: 0.1 });
+std('wcSeat',   { color: 0xFAF9F7, roughness: 0.23, clearcoat: 0.18 });
+std('wcSeam',   { color: 0x969792, roughness: 0.55 });
 std('tambour',  { map: tambour({ base: 0x8A7F72 }), roughness: 0.4 });
 std('tlt3wall', { map: marble({ base: 0xD8C9B0, vein: 0x9C8465, tile: 1.2, veins: 7, seed: 44 }), roughness: 0.16 });
 std('terrazzo', { map: terrazzo({ base: 0xD9CDBA }), roughness: 0.3 });
@@ -187,6 +192,45 @@ function prism(outer, holes, z0, z1, mat, capMat) {
 const rbox = (w, h, d, r = 0.02) => new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3));
 function mesh(geo, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; return m;
+}
+
+// Loft a rounded-square plan outline through height. A wall-hung WC needs a
+// slimmer underside and a broad, flat seat; a rounded box loses both cues.
+function wcLoft(rings) {
+  const arcSteps = 10, points = [], vertices = [], indices = [];
+  for (const { y, w, d, z, rear = 0.055, front = w * 0.45 } of rings) {
+    const outline = [], addArc = (cx, cz, r, start) => {
+      for (let i = 0; i <= arcSteps; i++) {
+        const a = start + i * Math.PI / (2 * arcSteps);
+        outline.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r + z]);
+      }
+    };
+    addArc(-w / 2 + rear, -d / 2 + rear, rear, Math.PI);
+    addArc( w / 2 - rear, -d / 2 + rear, rear, Math.PI * 1.5);
+    addArc( w / 2 - front, d / 2 - front, front, 0);
+    addArc(-w / 2 + front, d / 2 - front, front, Math.PI / 2);
+    points.push(outline);
+    for (const [x, zz] of outline) vertices.push(x, y, zz);
+  }
+  const count = points[0].length;
+  for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count, a = k * count + i, b = k * count + j;
+    indices.push(a, a + count, b + count, a, b + count, b);
+  }
+  // Close both horizontal ends so the seat does not reveal a hollow shell.
+  const bottom = vertices.length / 3;
+  vertices.push(0, rings[0].y, rings[0].z);
+  const top = vertices.length / 3;
+  vertices.push(0, rings[rings.length - 1].y, rings[rings.length - 1].z);
+  for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count;
+    indices.push(bottom, i, j);
+    indices.push(top, (rings.length - 1) * count + j, (rings.length - 1) * count + i);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setIndex(indices); geo.computeVertexNormals();
+  return geo;
 }
 
 // point-in-polygon on plan rings, for "which side of this unit is the wall"
@@ -571,7 +615,38 @@ const B = {
   },
   wc(p) {
     const o = p.obb, back = backDir(o), g = frame(o, [-back[0], -back[1]]);
-    g.add(mesh(rbox(0.36, 0.34, 0.5, 0.12), M.ceramic, 0, 0.4, 0.02));
+    // Kohler publishes the Trace WC at 362 x 544 mm in plan. Its silhouette
+    // suits the Master renders, but this is a procedural approximation, not
+    // a manufacturer's exact 3D model or a confirmed product selection.
+    // Keep the CAD centre and back-wall alignment. Local +Z faces the room.
+    const body = [
+      { y: 0.15, w: 0.17, d: 0.25, z: -0.125, rear: 0.04, front: 0.08 },
+      { y: 0.19, w: 0.22, d: 0.32, z: -0.095, rear: 0.05, front: 0.10 },
+      { y: 0.25, w: 0.29, d: 0.41, z: -0.05, rear: 0.055, front: 0.13 },
+      { y: 0.33, w: 0.34, d: 0.49, z: -0.012, rear: 0.06, front: 0.15 },
+      { y: 0.41, w: 0.36, d: 0.54, z: 0.015, rear: 0.065, front: 0.16 },
+      { y: 0.445, w: 0.362, d: 0.544, z: 0.018, rear: 0.065, front: 0.162 },
+    ];
+    g.add(mesh(wcLoft(body), M.wcChina));
+    // The fine grey shadow line and two distinct slim layers are visible from
+    // both the walk camera and the overhead diorama, with the lid closed as in
+    // the Master washroom renders.
+    g.add(mesh(wcLoft([
+      { y: 0.446, w: 0.361, d: 0.54, z: 0.018, rear: 0.064, front: 0.16 },
+      { y: 0.452, w: 0.361, d: 0.54, z: 0.018, rear: 0.064, front: 0.16 },
+    ]), M.wcSeam));
+    g.add(mesh(wcLoft([
+      { y: 0.453, w: 0.358, d: 0.535, z: 0.018, rear: 0.064, front: 0.16 },
+      { y: 0.467, w: 0.358, d: 0.535, z: 0.018, rear: 0.064, front: 0.16 },
+    ]), M.wcSeat));
+    g.add(mesh(wcLoft([
+      { y: 0.468, w: 0.336, d: 0.485, z: 0.031, rear: 0.064, front: 0.15 },
+      { y: 0.482, w: 0.33, d: 0.478, z: 0.03, rear: 0.064, front: 0.148 },
+    ]), M.wcSeat));
+    for (const x of [-0.105, 0.105]) {
+      const hinge = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.036, 12), M.wcChina, x, 0.473, -0.224);
+      hinge.rotation.z = Math.PI / 2; g.add(hinge);
+    }
     return g;
   },
   basin(p) {

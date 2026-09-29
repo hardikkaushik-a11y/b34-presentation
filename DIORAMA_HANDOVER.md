@@ -1,4 +1,10 @@
-# Diorama - handover (branch `claude/diorama-v2-wip`)
+# Diorama - handover (current worktree branch `codex/diorama-additions`)
+
+## Update - 2026-09-29: White wall-hung WCs (published on `origin/main`)
+
+- `diorama/diorama.js` replaces the pill-shaped WC placeholder in all four washrooms with a tapered wall-hung ceramic body, a separate slim closed seat/lid, a fine rim seam, and hinges. It preserves the CAD-derived position and facing of each fixture. Basin and tile materials are unchanged.
+- The Master washroom's four supplied renders show a white closed-seat WC with a tapered underside. Kohler India's [Trace wall-hung WC](https://www.kohler.co.in/p/toilets/trace-wall-hung-toilet-with-skirted-trapway-ec20217in-s) is a close visual reference, and Kohler's project catalogue lists a 362 x 544 mm footprint. The procedural geometry is an approximation, not a confirmed Kohler SKU or factory model. No WC has yet been selected for Toilets 1, 2, or 4.
+- Checked Toilets 1 to 4 in the local diorama, including a close angled look at Toilet 3. `node --check diorama/diorama.js`, `git diff --check`, and the browser console error check passed. Walk mode loaded, but Toilet 4's entry camera began very close to a wall; that pre-existing camera framing needs a separate review.
 
 ## Update - 2026-09-29: Room and washroom door travel
 
