@@ -238,6 +238,22 @@ const STRIP = [[7.92, 12.639], [7.92, 14.392], [8.40, 14.392], [8.40, 13.427], [
   bal.floor = [...bal.floor, { outer: STRIP, holes: [] }];
 }
 const bedrooms = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRing });
+// Bedroom 2's window-bay wardrobe occupies y=5.55..6.36 in plan. The room
+// outline contains a provisional 0.9 m sill wall through that same footprint,
+// which masks the wardrobe's lower half and makes it read as a shelf. Keep the
+// sill below the desk/window run, ending it at the wardrobe rather than drawing
+// placeholder masonry through the designed joinery. Apply to both the flat shell
+// and the isolated-room shell, which hold separate wall records.
+function clearBed2WardrobeSill(walls = []) {
+  for (const w of walls) {
+    if (w.kind !== 'provisional_window_sill') continue;
+    const xs = w.outer.map(p => p[0]), ys = w.outer.map(p => p[1]);
+    if (Math.min(...xs) < 14.88 || Math.max(...xs) > 15.14 || Math.max(...ys) < 6.35) continue;
+    w.outer = [[14.887, 5.55], [15.128, 5.55], [15.128, 3.536], [14.887, 3.536], [14.887, 5.55]];
+  }
+}
+clearBed2WardrobeSill(zone.walls);
+clearBed2WardrobeSill(zone.rooms.find(r => r.id === 'bed2')?.walls);
 const bedroomFloors = Object.values(bedrooms.floors);
 // the bedroom rings that sit wholly inside a floor polygon and clear of its own holes
 const floorCuts = (f) => bedroomFloors.filter(ring => ring.every(p => inRing(p, f.outer))
