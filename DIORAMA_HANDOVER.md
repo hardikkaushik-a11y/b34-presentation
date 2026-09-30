@@ -1,5 +1,11 @@
 # Diorama - handover (current worktree branch `codex/diorama-additions`)
 
+## Update - 2026-09-30 (2): WCs face the room, designer walls behind the showers, bedroom floors fixed
+
+- **WCs** (`diorama.js`, `B.wc`): all four faced along their wall. The builder used `backDir()`, which looks for a wall beside a piece's short side (right for counters), but a WC's wall is at the end of its long side (the pan projects from the wall). It now finds that end, faces away from it, and sits the pan's back on the wall face (the four CAD WCs all meet a wall 5 cm past one end).
+- **Designer walls** (`products.js`): the highlight tile goes on the wall the shower stands against, not behind the basin. One rule picks the shower's wall for both the mixer and the highlight: the nearest wall at least 50 cm long; in a corner (two walls within 5 cm) the longer one. Stored as `wallEdge` on the shower piece. Checked T2 (edge 2), T3 (edge 1), T4 (edge 1): highlight and mixer share the wall.
+- **White bedroom floors** (`housefloor.js`): the bedrooms' knee-height cutaway copy clones every material, and a clone dropped the marble shader, so the copy painted the floor plain white over the marble. The house-marble material now re-applies itself on `clone()`. Also: honed finish (roughness 0.42, light clearcoat), and colours set so that under the model's sun (every floor is sunlit because the ceiling is cut) the stone renders at the photo's brightness, a step darker than the walls (measured floor luma was 194, walls 173-186, before).
+
 ## Update - 2026-09-30: The floor is locked to the flat's own marble
 
 - `diorama/housefloor.js` (new): the real floor, recreated from a site photo, as a per-pixel material on world position (no image, so no slab repeats): beige-taupe body, fleecy white cloudlets 3-7 cm stretched across the slab, a fine brown crackle web with some red-cast veins, a few long veins, 60 x 90 cm slabs with hairline joints. Detail finer than a pixel fades to its average so it cannot shimmer. Colours read off the photo (camera greyed/dimmed it; hues kept, exposure lifted).

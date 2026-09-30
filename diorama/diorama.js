@@ -618,7 +618,17 @@ const B = {
     return g;
   },
   wc(p) {
-    const o = p.obb, back = backDir(o), g = frame(o, [-back[0], -back[1]]);
+    // A WC's wall is at the end of its long side (the pan projects from the wall),
+    // not beside it as for a counter: find that end, face away from it, and sit the
+    // pan's back against the wall face.
+    const o = p.obb, u = [Math.cos(o.angle), Math.sin(o.angle)];
+    let back = null, gap = 0;
+    for (let k = 0; k <= 0.3 && !back; k += 0.005) for (const s of [1, -1]) {
+      if (inWall([o.cx + u[0] * s * (o.w / 2 + k), o.cy + u[1] * s * (o.w / 2 + k)])) { back = [u[0] * s, u[1] * s]; gap = k; break; }
+    }
+    if (!back) back = backDir(o);
+    const g = frame(o, [-back[0], -back[1]]);
+    const seat = new THREE.Group(); seat.position.z = -gap + 0.002; g.add(seat);
     // Kohler publishes the Trace WC at 362 x 544 mm in plan. Its silhouette
     // suits the Master renders, but this is a procedural approximation, not
     // a manufacturer's exact 3D model or a confirmed product selection.
@@ -631,25 +641,25 @@ const B = {
       { y: 0.41, w: 0.36, d: 0.54, z: 0.015, rear: 0.065, front: 0.16 },
       { y: 0.445, w: 0.362, d: 0.544, z: 0.018, rear: 0.065, front: 0.162 },
     ];
-    g.add(mesh(wcLoft(body), M.wcChina));
+    seat.add(mesh(wcLoft(body), M.wcChina));
     // The fine grey shadow line and two distinct slim layers are visible from
     // both the walk camera and the overhead diorama, with the lid closed as in
     // the Master washroom renders.
-    g.add(mesh(wcLoft([
+    seat.add(mesh(wcLoft([
       { y: 0.446, w: 0.361, d: 0.54, z: 0.018, rear: 0.064, front: 0.16 },
       { y: 0.452, w: 0.361, d: 0.54, z: 0.018, rear: 0.064, front: 0.16 },
     ]), M.wcSeam));
-    g.add(mesh(wcLoft([
+    seat.add(mesh(wcLoft([
       { y: 0.453, w: 0.358, d: 0.535, z: 0.018, rear: 0.064, front: 0.16 },
       { y: 0.467, w: 0.358, d: 0.535, z: 0.018, rear: 0.064, front: 0.16 },
     ]), M.wcSeat));
-    g.add(mesh(wcLoft([
+    seat.add(mesh(wcLoft([
       { y: 0.468, w: 0.336, d: 0.485, z: 0.031, rear: 0.064, front: 0.15 },
       { y: 0.482, w: 0.33, d: 0.478, z: 0.03, rear: 0.064, front: 0.148 },
     ]), M.wcSeat));
     for (const x of [-0.105, 0.105]) {
       const hinge = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.036, 12), M.wcChina, x, 0.473, -0.224);
-      hinge.rotation.z = Math.PI / 2; g.add(hinge);
+      hinge.rotation.z = Math.PI / 2; seat.add(hinge);
     }
     return g;
   },

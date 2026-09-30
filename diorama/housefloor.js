@@ -66,13 +66,16 @@ vec3 houseMarble(vec2 w, out float veinAmt) {
 }
 `;
 
-// colours read off the photo (its camera greys and dims the stone; hue relationships
-// kept, exposure lifted to the flat's lighting)
-const COLORS = { hBody: 0xC3B6A7, hDark: 0xA59787, hCloud: 0xDED8CE, hVein: 0x856F5C, hRed: 0x976152, hJoint: 0x8C8275 };
+// colours from the photo (body, darker drift, clouds, veins), set so that under the
+// model's sun, which lands on every floor because the ceiling is cut away, the stone
+// renders at the photo's brightness: a clear step darker than the white walls
+const COLORS = { hBody: 0x837B71, hDark: 0x766D62, hCloud: 0xADA89F, hVein: 0x5D4D3D, hRed: 0x6E473C, hJoint: 0x665E52 };
 
 export function houseMarble(m) {
   const u = Object.fromEntries(Object.entries(COLORS).map(([k, h]) => [k, { value: new THREE.Color(h) }]));
-  Object.assign(m, { map: null, normalMap: null, metalness: 0, roughness: 0.2, clearcoat: 0.25, clearcoatRoughness: 0.12, sheen: 0 });
+  // honed, as in the photo: a soft sheen, not a mirror, so bright rooms (whose
+  // reflections come from her renders) do not wash the stone out to white
+  Object.assign(m, { map: null, normalMap: null, metalness: 0, roughness: 0.42, clearcoat: 0.06, clearcoatRoughness: 0.3, sheen: 0, envMapIntensity: 0.55 });
   m.color.set(0xffffff);
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
@@ -84,6 +87,9 @@ export function houseMarble(m) {
   };
   m.customProgramCacheKey = () => 'house-marble';
   m.userData.houseFloor = true;
+  // a copy must stay marble: the bedrooms' knee-height cutaway copies every material,
+  // and a plain clone would drop this shader and paint the floor white
+  m.clone = function () { return houseMarble(Object.getPrototypeOf(this).clone.call(this)); };
   m.needsUpdate = true;
   return m;
 }

@@ -337,18 +337,17 @@ export function createProducts(api) {
       if (!best || score > best.score) best = { pt, score };
     }
     if (!best) continue;
-    // nearest wall, for the mixer
-    let wall = [1, 0], wd = Infinity;
-    for (let i = 0; i < ring.length - 1; i++) {
-      const [a, b] = [ring[i], ring[i + 1]], d = segDist(best.pt, a, b);
-      if (d < wd) {
-        wd = d; const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); let n = [-dy / L, dx / L];
-        if (inRing([best.pt[0] + n[0] * 0.05, best.pt[1] + n[1] * 0.05], ring) && d > 0.06) n = [-n[0], -n[1]];
-        wall = n;
-      }
-    }
+    // The shower's wall: the nearest full-length wall; in a corner (two walls within
+    // 5 cm of each other) the longer one, the backdrop behind the shower. It carries
+    // the mixer and is the washroom's designer wall.
+    const cands = ring.slice(0, -1).map((a, i) => ({ i, d: segDist(best.pt, a, ring[i + 1]), len: Math.hypot(ring[i + 1][0] - a[0], ring[i + 1][1] - a[1]) })).filter(e => e.len >= 0.5);
+    const dmin = Math.min(...cands.map(e => e.d));
+    const pick = cands.filter(e => e.d <= dmin + 0.05).sort((a, b) => b.len - a.len)[0];
+    const [a, b] = [ring[pick.i], ring[pick.i + 1]], wd = pick.d, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let wall = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L];
+    if (inRing([best.pt[0] + wall[0] * 0.05, best.pt[1] + wall[1] * 0.05], ring) && wd > 0.06) wall = [-wall[0], -wall[1]];
     const p = { id: `shower-${t}`, type: 'rain_shower', name: 'Rain shower', home: t, room: t, fixture: true, movable: false,
-                obb: { cx: best.pt[0], cy: best.pt[1], w: 0.3, d: 0.3, angle: 0 }, footprint: [], wall, wallDist: wd, size: 0.254, finish: 'chrome' };
+                obb: { cx: best.pt[0], cy: best.pt[1], w: 0.3, d: 0.3, angle: 0 }, footprint: [], wall, wallDist: wd, wallEdge: pick.i, size: 0.254, finish: 'chrome' };
     B.rain_shower = BUILD.rain_shower;
     showers[t] = api.placePiece(p);
   }
@@ -407,6 +406,12 @@ export function createProducts(api) {
     }
     return out;
   };
+  // the designer wall is the wall the shower stands against (the one carrying its
+  // mixer): the nearest full-length wall to the shower
+  function showerFeatureEdge(ringId) {
+    const sh = showers[ringId]?.userData.piece;
+    return sh && Number.isInteger(sh.wallEdge) ? sh.wallEdge : basinFeatureEdge(ringId);
+  }
   function basinFeatureEdge(ringId) {
     const ring = room(ringId).outline;
     const basin = zone.pieces.find(q => q.home === ringId && q.type === 'basin');
@@ -440,7 +445,7 @@ export function createProducts(api) {
       rebuild(g, BUILD.rain_shower);
     }
     if (applied.t2walls !== s.t2walls) {
-      const ring = room('tlt2').outline, feature = basinFeatureEdge('tlt2');
+      const ring = room('tlt2').outline, feature = showerFeatureEdge('tlt2');
       const g = panels('tlt2', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile('striated') : tile('plainLight'), 't2walls');
       g.add(inlay('tlt2', tile('plainLight')));
       setTiles('t2walls', g);
@@ -450,7 +455,7 @@ export function createProducts(api) {
       if (s.t3walls === 'marble') { if (t3) t3.userData.off = false; setTiles('t3', null); }
       else {
         if (t3) { t3.userData.off = true; t3.visible = false; }
-        const ring = room('tlt3').outline, feature = basinFeatureEdge('tlt3');
+        const ring = room('tlt3').outline, feature = showerFeatureEdge('tlt3');
         const g = panels('tlt3', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile(s.t3walls) : tile('plainLight'), 't3');
         g.add(inlay('tlt3', tile('plainLight')));
         setTiles('t3', g);
@@ -463,7 +468,7 @@ export function createProducts(api) {
       setTiles('balcony', g);
     }
     if (applied.t4tiles !== s.t4tiles) {
-      const ring = room('tlt4').outline, feature = basinFeatureEdge('tlt4');
+      const ring = room('tlt4').outline, feature = showerFeatureEdge('tlt4');
       const g = panels('tlt4', ring.slice(0, -1).map((_, i) => i), (i) => i === feature ? tile('botanical') : tile('plainGrey'), 't4tiles');
       g.add(inlay('tlt4', tile('plainGrey')));
       tiledCeiling(g, 'tlt4', tile('plainGrey'));
