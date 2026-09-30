@@ -10,6 +10,7 @@
 // changed room by room; Toilet 3 stays as she specified it.
 import { api } from './diorama.js';
 import { createProducts } from './products.js';
+import { HOUSE_SWATCH } from './housefloor.js';
 import { createWalk } from './walk.js';
 import { marble, wood, fabric, shutter, paint, terrazzo, boucle, velvet, leather, limewash, travertine,
          normalFrom, swatchURL } from './textures.js';
@@ -69,6 +70,8 @@ const SAMPLES = [
   { id: 'pebble',    cat: 'paint',  name: 'Pebble grey',      c: 0xB8B3AC, L: .68, warm: 0,   soft: .3 },
   { id: 'greige',    cat: 'paint',  name: 'Greige',           c: 0xB9AD9D, L: .66, warm: .3,  soft: .3 },
 ];
+// the flat's own floor (housefloor.js): the only floor, never offered in the tray
+SAMPLES.push({ id: 'house', cat: 'stone', name: 'House marble', c: 0xC4B9AC, L: .74, warm: .3, soft: .15, hidden: true });
 const SAMPLE = Object.fromEntries(SAMPLES.map(s => [s.id, s]));
 const CATS = [['wood', 'Wood'], ['stone', 'Stone'], ['fabric', 'Fabric'], ['paint', 'Paint']];
 
@@ -85,7 +88,7 @@ const SLOTS = {
   doors:      { name: 'Doors', the: 'the doors', cats: ['wood', 'paint'], mat: 'door' },
   rug:        { name: 'Rugs', the: 'the rugs', cats: ['fabric'], mat: 'rug' },
 };
-const DEFAULTS = { floor: 'botticino', walls: 'warmwhite', joinery: 'taupe', worktop: 'bianco', upholstery: 'oat',
+const DEFAULTS = { floor: 'house', walls: 'warmwhite', joinery: 'taupe', worktop: 'bianco', upholstery: 'oat',
                    accent: 'rust', woodwork: 'walnut', doors: 'oak', rug: 'grey' };
 // Each bedroom has its own slots, keyed '<room>.<surface>', on its own materials and
 // starting from her finishes. In a bedroom, the tray, presets and meter work on that
@@ -106,11 +109,13 @@ for (const d of api.bedroomSlots) {
   SLOTS[k] = { name: t.name, the: `the ${room} ${t.thing}`, cats: t.cats, mat: d.mat, room: d.rid };
   DEFAULTS[k] = d.def;
 }
+// every floor, flat and bedrooms, is locked to the house marble
+for (const k of Object.keys(SLOTS)) if (k === 'floor' || k.endsWith('.floor')) { SLOTS[k].locked = true; DEFAULTS[k] = 'house'; }
 const baseOf = (slot) => slot.split('.').pop();
 // a flat-wide surface key, read in the room on screen when that room has its own
 const scoped = (k) => { const f = api.focused, rk = f && `${f.id}.${k}`; return rk && SLOTS[rk] ? rk : k; };
 const inScope = () => { const f = api.focused; return Object.keys(SLOTS).filter(k => f && SLOTS[`${f.id}.floor`] ? SLOTS[k].room === f.id : !SLOTS[k].room); };
-const FIRST_SLOT = { wood: 'floor', stone: 'floor', paint: 'walls', fabric: 'upholstery' };
+const FIRST_SLOT = { wood: 'woodwork', stone: 'worktop', paint: 'walls', fabric: 'upholstery' };
 /* Client-facing floor and wall choices stay within the quiet material language of
    the project. The larger library remains available for joinery, worktops and soft
    furnishings, but saturated green, blue, yellow and novelty dark floors are not
@@ -122,7 +127,7 @@ const CURATED_SURFACES = {
                   'botticino', 'bianco', 'travertine'])
 };
 // rug patterns go only on rugs
-const allowedOn = (slot, id) => { const b = baseOf(slot); return (!CURATED_SURFACES[b] || CURATED_SURFACES[b].has(id)) && (!SAMPLE[id]?.rug || b === 'rug'); };
+const allowedOn = (slot, id) => { if (SLOTS[slot]?.locked || SAMPLE[id]?.hidden) return false; const b = baseOf(slot); return (!CURATED_SURFACES[b] || CURATED_SURFACES[b].has(id)) && (!SAMPLE[id]?.rug || b === 'rug'); };
 const MAT2SLOT = new Map(Object.entries(SLOTS).map(([k, s]) => [M[s.mat], k]));
 const LOCKED = new Set([M.tlt3wall, M.t3walnut, M.terrazzo]);
 
@@ -176,6 +181,7 @@ function finishFor(s, room_slot) {
 const state = { f: {}, t: 10.5, c: {}, p: {} };
 const DEFAULT_T = 10.5;
 function setSlot(slot, id) {
+  if (SLOTS[slot]?.locked) { state.f[slot] = 'house'; return; }     // the floor never changes
   const s = SAMPLE[id], m = M[SLOTS[slot].mat];
   if (!s) return;
   const f = finishFor(s, slot);
@@ -745,6 +751,7 @@ function selectPiece(g) {
   showCard(); refresh();
 }
 function selectSlot(slot, point = null) {
+  if (SLOTS[slot]?.locked) { deselect(); return toast('The floor is the flat\u2019s own marble'); }
   sel = { slot, point }; outline.visible = false; highlight(slot);
   const cats = SLOTS[slot].cats;
   if (!cats.includes(tab)) setTab(cats[0]); else renderTray();
@@ -922,6 +929,7 @@ $('.target button', ui).onclick = () => deselect();
 
 const swatchImg = new Map();
 function swatchFor(s) {
+  if (s.id === 'house') return HOUSE_SWATCH;
   if (!swatchImg.has(s.id)) swatchImg.set(s.id, swatchURL(finishFor(s, FIRST_SLOT[s.cat]).map, 112));
   return swatchImg.get(s.id);
 }
@@ -1489,7 +1497,7 @@ function productPic(key, id) {
   if (k === 'finish') return `background:${METAL[id]}`;
   if (k === 't2walls' || k === 't3walls' || k === 'balconyFloor' || k === 'balconyWall' || k === 't4tiles') {
     if (k === 't3walls' && id === 'marble') return `background-image:url(${swatchURL(M.tlt3wall.map, 112)})`;
-    if (k === 'balconyFloor' && id === 'plain') return `background-image:url(${swatchURL(M.floor.map, 112)})`;
+    if (k === 'balconyFloor' && id === 'plain') return `background-image:url(${HOUSE_SWATCH})`;
     if (k === 'balconyWall' && id === 'paint') return `background-image:url(${swatchURL(M.walls.map, 112)})`;
     const name = k === 't4tiles' ? 'botanical' : k === 't2walls' ? 'striated' : ({ geode: 'geode', emerald: 'geode', patterned: 'encaustic', plain: 'plainGrey' }[id]);
     return `background-image:url(${swatchURL(PR.tile(name).map, 112)})`;
@@ -1612,7 +1620,7 @@ document.body.classList.add('configurator');
 // Calm by default, like Ryan Sael's room: the moodboard cards and their threads wait
 // behind the eye button (or N).
 document.body.classList.add('no-board');
-for (const k in SLOTS) spreadable(M[SLOTS[k].mat]);
+for (const k in SLOTS) if (!SLOTS[k].locked) spreadable(M[SLOTS[k].mat]);
 // compile the finishes' shaders in parallel before drawing with them, instead of
 // stalling the page on the first frame
 api.hold = true;

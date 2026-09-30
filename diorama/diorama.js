@@ -16,6 +16,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { marble, wood, fabric, shutter, tambour, paint, terrazzo, leather, limewash, normalFrom } from './textures.js';
 import { buildBedrooms } from './bedrooms.js';
+import { houseMarble } from './housefloor.js';
 
 const zone = await (await fetch('../assets/diorama/zone.json')).json();
 const [CX, CY] = zone.centre;
@@ -138,7 +139,8 @@ const M = {};
 // physical, so a finish can take sheen (fabric) or a clearcoat (polished stone,
 // lacquer) when the configurator swaps it; at zero they cost what standard costs
 function std(key, opts) { M[key] = new THREE.MeshPhysicalMaterial(opts); return M[key]; }
-std('floor',    { map: marble({ base: 0xDCCFBC, vein: 0xA88E6E, tile: 0.8, seed: 21 }), roughness: 0.2, metalness: 0 });
+// the flat's own marble, everywhere (housefloor.js); not a configurator choice
+houseMarble(std('floor', { roughness: 0.2, metalness: 0 }));
 std('walls',    { map: paint({ base: 0xEDE6DA }), roughness: 0.92 });
 std('section',  { color: 0x2A2521, roughness: 0.9 });
 std('sill',     { map: marble({ base: 0xD8CFBF, vein: 0xA8957C, tile: 1.2, joint: false, seed: 4 }), roughness: 0.3 });
@@ -282,6 +284,8 @@ const STRIP = [[7.92, 12.639], [7.92, 14.392], [8.40, 14.392], [8.40, 13.427], [
   bal.floor = [...bal.floor, { outer: STRIP, holes: [] }];
 }
 const bedrooms = buildBedrooms({ W, CUT, mesh, rbox, prism, M, zone, inWall, inRing });
+// the bedrooms are laid in the same marble as the rest of the flat
+for (const k of Object.keys(M)) if (k.endsWith('_floor')) houseMarble(M[k]);
 const bedroomFloors = Object.values(bedrooms.floors);
 // the bedroom rings that sit wholly inside a floor polygon and clear of its own holes
 const floorCuts = (f) => bedroomFloors.filter(ring => ring.every(p => inRing(p, f.outer))

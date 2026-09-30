@@ -1,5 +1,15 @@
 # Diorama - handover (current worktree branch `codex/diorama-additions`)
 
+## Update - 2026-09-30: The floor is locked to the flat's own marble
+
+- `diorama/housefloor.js` (new): the real floor, recreated from a site photo, as a per-pixel material on world position (no image, so no slab repeats): beige-taupe body, fleecy white cloudlets 3-7 cm stretched across the slab, a fine brown crackle web with some red-cast veins, a few long veins, 60 x 90 cm slabs with hairline joints. Detail finer than a pixel fades to its average so it cannot shimmer. Colours read off the photo (camera greyed/dimmed it; hues kept, exposure lifted).
+- `diorama/diorama.js`: `M.floor` and every bedroom floor material (`*_floor`) use it. Bedroom 3's dark oak and the other bedroom floor finishes are gone.
+- `diorama/configurator.js`: every floor slot (`floor`, `<room>.floor`) is `locked`: `setSlot` refuses it, `allowedOn` returns false (so presets, drag, click and links cannot change it), it is not made `spreadable`, clicking it toasts "The floor is the flat's own marble". A hidden sample `house` names it for the meter and the mood line. Wood and stone samples with no surface chosen now go to woodwork and worktops, not the floor.
+- `assets/diorama/reference/house-floor.jpg`: a 240 px crop of the photo, used only as the floor's swatch icon.
+- Washroom and balcony tile inlays (`products.js`) still sit on top of it; they are separate choices.
+- Not modelled: the photo also shows a red double border strip with a small diamond inset; where it runs in the flat is unknown.
+- Checked: all five floor materials carry it with no texture map; presets, a link asking for teak/statuario, the tray and the moodboard card all leave it unchanged; eye-level walk view compared against the photo; no console errors.
+
 ## Update - 2026-09-29: White wall-hung WCs (published on `origin/main`)
 
 - `diorama/diorama.js` replaces the pill-shaped WC placeholder in all four washrooms with a tapered wall-hung ceramic body, a separate slim closed seat/lid, a fine rim seam, and hinges. It preserves the CAD-derived position and facing of each fixture. Basin and tile materials are unchanged.
